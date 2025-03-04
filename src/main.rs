@@ -1,11 +1,9 @@
 mod db;
 
-use std::io::Write;
+use std::io::{Write, Read, BufReader};
 use std::net::{TcpListener, TcpStream};
-use std::thread;
 use std::sync::{Arc, Mutex};
-use std::io::{Read, BufReader};
-use crossterm::{execute, terminal, cursor, style::{Color, PrintStyledContent, Stylize}};
+use std::thread;
 
 #[derive(Clone)]
 struct BBSMenu {
@@ -51,37 +49,50 @@ impl BBSMenu {
 }
 
 fn handle_client(mut stream: TcpStream, menu: Arc<Mutex<BBSMenu>>) {
-    let mut reader = BufReader::new(stream.try_clone().unwrap());
+    let disable_line_mode = [
+        255, 251, 1,  // IAC WILL ECHO (Disable local echo)
+        255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)
+        255, 252, 34, // IAC WONT LINEMODE (Disable Telnet linemode)
+    ];
+    stream.write_all(&disable_line_mode).unwrap();
+    stream.flush().unwrap();
 
     let welcome_message = menu.lock().unwrap().render();
     stream.write_all(welcome_message.as_bytes()).unwrap();
     stream.flush().unwrap();
 
-    let mut buffer = [0; 3]; // To capture arrow keys (escape sequences)
-
-    while let Ok(n) = reader.read(&mut buffer) {
-        if n == 0 {
-            break; // Client disconnected
-        }
+    let mut buffer = [0; 1]; // To capture arrow keys (escape sequences)
+    println!("handle called");
+    while let Ok(n) = stream.read(&mut buffer) {
+        // println!("N val: {n:?}");
+        // if n == 0 {
+        //     break; // Client disconnected
+        // }
 
         let mut menu_lock = menu.lock().unwrap();
+        println!("BUFFER RECEIVED {buffer:?}");
 
-        match buffer {
-            [27, 91, 65] => menu_lock.move_up(),   // Up Arrow (ESC [ A)
-            [27, 91, 66] => menu_lock.move_down(), // Down Arrow (ESC [ B)
-            [13, ..] => {
-                let selection = menu_lock.options[menu_lock.selected_index];
-                if selection == "❌ Quit" {
-                    stream.write_all(b"\nGoodbye!\n").unwrap();
-                    break;
-                } else {
-                    stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
-                        .unwrap();
-                }
-            }
-            _ => {}
-        }
+        // // Handle arrow key sequences (ESC [ A for up, ESC [ B for down)
+        // if buffer[0] == 27 && buffer[1] == 91 {
+        //     match buffer[2] {
+        //         65 => menu_lock.move_up(),   // Up Arrow (ESC [ A)
+        //         66 => menu_lock.move_down(), // Down Arrow (ESC [ B)
+        //         _ => {} // Handle other sequences if necessary
+        //     }
+        // }
+        // // Handle Enter key
+        // else if buffer[0] == 13 {
+        //     let selection = menu_lock.options[menu_lock.selected_index];
+        //     if selection == "❌ Quit" {
+        //         stream.write_all(b"\nGoodbye!\n").unwrap();
+        //         break;
+        //     } else {
+        //         stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
+        //             .unwrap();
+        //     }
+        // }
 
+        // After processing the input, render the updated menu
         let updated_menu = menu_lock.render();
         stream.write_all(updated_menu.as_bytes()).unwrap();
         stream.flush().unwrap();
@@ -95,6 +106,7 @@ fn main() {
     let menu = Arc::new(Mutex::new(BBSMenu::new()));
 
     for stream in listener.incoming() {
+        println!("Listenter incomming");
         if let Ok(stream) = stream {
             let menu_clone = Arc::clone(&menu);
             thread::spawn(move || {
