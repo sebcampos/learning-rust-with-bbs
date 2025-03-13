@@ -10,7 +10,7 @@ use crate::input_interface::UserInterface;
 
 fn handle_client(mut stream: TcpStream) {
 
-    let user_interface = UserInterface::new();
+    let mut user_interface = UserInterface::new();
 
     let disable_line_mode = [
         255, 251, 1,  // IAC WILL ECHO (Disable local echo)
@@ -21,10 +21,10 @@ fn handle_client(mut stream: TcpStream) {
     stream.flush().unwrap();
     let s_ref: &mut TcpStream = &mut stream;
 
-
     let mut buffer = [0; 3]; // To capture arrow keys (escape sequences)
-    while let Ok(n) = stream.read(&mut buffer) {
+    while let Ok(n) = s_ref.read(&mut buffer) {
         println!("N val: {n:?}");
+
         if n == 0 {
             break; // Client disconnected
         }
@@ -32,7 +32,9 @@ fn handle_client(mut stream: TcpStream) {
         //let mut interface_lock = user_interface.lock().unwrap();
 
         let action = user_interface.get_user_action(&buffer);
-        let action_result = user_interface.get_current_view().handle_action(action, s_ref);
+
+        let mut view = user_interface.get_current_view();
+        let action_result = view.handle_action(action, s_ref);
         if action_result == input_interface::EXIT {
             break;
         }

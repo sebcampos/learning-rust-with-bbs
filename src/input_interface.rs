@@ -23,8 +23,8 @@ impl UserInterface {
         }
     }
 
-    pub fn get_current_view(&self) -> &Box<dyn base_view::View> {
-        &self.current_view
+    pub fn get_current_view(&mut self) -> &mut dyn base_view::View {
+        self.current_view.as_mut()
     }
 
     pub fn get_user_action(&self, buffer: &[u8; 3]) -> i32 {
