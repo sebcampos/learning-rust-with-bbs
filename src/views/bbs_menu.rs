@@ -1,6 +1,7 @@
 use std::net::TcpStream;
 use crate::views::base_view::View;
 use crate::input_interface;
+use crate::input_interface::Events;
 use std::io::{Write, Read, BufReader};
 
 #[derive(Clone)]
@@ -52,24 +53,29 @@ impl View for BBSMenu {
         self.options[self.selected_index]
     }
 
-    fn handle_action(&mut self, action: i32, stream: &mut TcpStream) -> i32 {
-        if action == input_interface::UP_ARROW {
-            self.move_up();
-        }
-        else if action == input_interface::DOWN_ARROW {
-            self.move_down();
-        }
-        else if action == input_interface::ENTER {
-            let selection = self.get_selection();
-            if selection == "❌ Quit" {
-                stream.write_all(b"\nGoodbye!\n").unwrap();
-                return input_interface::EXIT;
-            } else {
-                stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
-                    .unwrap();
+    fn handle_selection(&mut self, stream: &mut TcpStream) {
+        let selection = self.get_selection();
+        if selection == "❌ Quit" {
+            stream.write_all(b"\nGoodbye!\n").unwrap();
+        } else {
+            stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
+                .unwrap();
             }
+
+    }
+
+    fn handle_event(&mut self, event: Events, stream: &mut TcpStream) {
+        // let event = Events::from_int(action);
+        if event == Events::UpArrow {
+            self.move_up()
         }
-        input_interface::CONTINUE
+        else if event == Events::DownArrow {
+            self.move_down()
+        }
+        else if event == Events::Enter {
+            self.handle_selection(stream)
+        }
+
     }
 
 }

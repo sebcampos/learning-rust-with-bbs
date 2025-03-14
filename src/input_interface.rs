@@ -7,6 +7,30 @@ pub const DOWN_ARROW: i32 = 66;
 
 pub const EXIT: i32 = -1;
 pub const CONTINUE: i32 = -2;
+pub const NAVIGATE_VIEW: i32 = -3;
+#[derive(PartialEq, Eq)]
+pub enum Events {
+    UpArrow,
+    DownArrow,
+    LeftArrow,
+    RightArrow,
+    Enter,
+    Exit,
+    NavigateView,
+    Unknown
+}
+
+impl Events {
+    pub(crate) fn from_int(value: i32) -> Option<Events> {
+        match value {
+            65 => Some(Events::UpArrow),
+            66 => Some(Events::DownArrow),
+            2 => Some(Events::Enter),
+            _ => Some(Events::Unknown)
+        }
+    }
+}
+
 
 
 
@@ -27,19 +51,16 @@ impl UserInterface {
         self.current_view.as_mut()
     }
 
-    pub fn get_user_action(&self, buffer: &[u8; 3]) -> i32 {
-        let action: i32;
+    pub fn get_user_event(&self, buffer: &[u8; 3]) -> Events {
+        // TODO Enter button no longer working!
+        let event: Events;
         if buffer[0] == 27 && buffer[1] == 91 {
-            match buffer[2] {
-                65 => action = UP_ARROW,
-                66 => action = DOWN_ARROW,
-                _ => action = -1
-            }
+            event =  Events::from_int(buffer[2] as i32).unwrap()
         } else if buffer[0] == 13 {
-            action = ENTER;
+            event =  Events::from_int(buffer[0] as i32).unwrap()
         } else {
-            action = -1;
+            event =  Events::from_int(-1).unwrap()
         }
-        action
+        event
     }
 }

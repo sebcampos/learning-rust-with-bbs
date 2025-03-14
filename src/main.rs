@@ -7,6 +7,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::input_interface::UserInterface;
+use crate::input_interface::Events;
 
 fn handle_client(mut stream: TcpStream) {
 
@@ -23,21 +24,19 @@ fn handle_client(mut stream: TcpStream) {
 
     let mut buffer = [0; 3]; // To capture arrow keys (escape sequences)
     while let Ok(n) = s_ref.read(&mut buffer) {
-        println!("N val: {n:?}");
 
         if n == 0 {
             break; // Client disconnected
         }
 
-        //let mut interface_lock = user_interface.lock().unwrap();
 
-        let action = user_interface.get_user_action(&buffer);
-
-        let mut view = user_interface.get_current_view();
-        let action_result = view.handle_action(action, s_ref);
-        if action_result == input_interface::EXIT {
+        let user_event = user_interface.get_user_event(&buffer);
+        if user_event == Events::Exit {
             break;
         }
+
+        let mut view = user_interface.get_current_view();
+        view.handle_event(user_event, s_ref);
 
         let updated_view = user_interface.get_current_view().render();
         s_ref.write_all(updated_view.as_bytes()).unwrap();
