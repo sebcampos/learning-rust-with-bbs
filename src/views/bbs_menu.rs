@@ -17,6 +17,21 @@ impl BBSMenu {
             selected_index: 0,
         }
     }
+
+    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
+        let selection = self.get_selection();
+        let result_event: Events;
+        if selection == "❌ Quit" {
+            stream.write_all(b"\nGoodbye!\n").unwrap();
+            result_event = Events::Exit;
+        } else {
+            stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
+                .unwrap();
+            result_event = Events::NavigateView;
+        }
+        result_event
+    }
+
 }
 
 // Implement the `Menu` trait for `BBSMenu`
@@ -53,29 +68,25 @@ impl View for BBSMenu {
         self.options[self.selected_index]
     }
 
-    fn handle_selection(&mut self, stream: &mut TcpStream) {
-        let selection = self.get_selection();
-        if selection == "❌ Quit" {
-            stream.write_all(b"\nGoodbye!\n").unwrap();
-        } else {
-            stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
-                .unwrap();
-            }
 
-    }
+    fn handle_event(&mut self, event: Events, stream: &mut TcpStream) ->  Events {
+        let result_event: Events;
 
-    fn handle_event(&mut self, event: Events, stream: &mut TcpStream) {
-        // let event = Events::from_int(action);
         if event == Events::UpArrow {
-            self.move_up()
+            result_event = event;
+            self.move_up();
         }
         else if event == Events::DownArrow {
-            self.move_down()
+            result_event = event;
+            self.move_down();
         }
         else if event == Events::Enter {
-            self.handle_selection(stream)
+            result_event = self.handle_selection(stream);
         }
-
+        else {
+            result_event = event;
+        }
+        result_event
     }
 
 }

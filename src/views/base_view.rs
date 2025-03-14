@@ -9,7 +9,6 @@ pub trait View {
     fn move_down(&mut self);
     fn get_selection(&mut self) -> &str;
 
-    fn handle_event(&mut self,  event: Events, stream: &mut TcpStream);
+    fn handle_event(&mut self,  event: Events, stream: &mut TcpStream) -> Events;
 
-    fn handle_selection(&mut self, stream: &mut TcpStream);
 }

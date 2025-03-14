@@ -36,7 +36,10 @@ fn handle_client(mut stream: TcpStream) {
         }
 
         let mut view = user_interface.get_current_view();
-        view.handle_event(user_event, s_ref);
+        let view_handle_event = view.handle_event(user_event, s_ref);
+        if view_handle_event == Events::Exit {
+            break;
+        }
 
         let updated_view = user_interface.get_current_view().render();
         s_ref.write_all(updated_view.as_bytes()).unwrap();

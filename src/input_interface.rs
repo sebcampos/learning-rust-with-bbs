@@ -25,7 +25,7 @@ impl Events {
         match value {
             65 => Some(Events::UpArrow),
             66 => Some(Events::DownArrow),
-            2 => Some(Events::Enter),
+            13 => Some(Events::Enter),
             _ => Some(Events::Unknown)
         }
     }
