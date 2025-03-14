@@ -1,25 +1,16 @@
-use rusqlite::{params, Connection, Result};
+use rusqlite::{params, Connection};
+use crate::db::queries;
 
-fn main() -> Result<()> {
+pub (crate) fn create_connection() -> Connection {
     // Connect to SQLite (creates 'bbs.db' if not exists)
-    let conn = Connection::open("bbs.db")?;
+    let conn = Connection::open("bbs.db").unwrap();
 
     // Create users table
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        );",
-        [],
-    )?;
-
-    // Insert a test user
-    conn.execute(
-        "INSERT INTO users (username, password) VALUES (?1, ?2)",
-        params!["admin", "1234"],
-    )?;
+    conn.execute(queries::CREATE_USERS, []).expect("Create failed");
+    conn.execute(queries::CREATE_ROOMS, []).expect("Create rooms failed");
+    conn.execute(queries::CREATE_ROOM_MESSAGES, []).expect("Create room messages failed");
+    conn.execute(queries::CREATE_DIRECT_MESSAGES, []).expect("Create direct messages failed");
 
     println!("Database setup complete! ✅");
-    Ok(())
+    conn
 }

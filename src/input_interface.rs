@@ -1,13 +1,7 @@
 use crate::views;
 use crate::views::base_view;
+use crate::views::base_view::NavigateTo;
 
-pub const ENTER: i32 = 13;
-pub const UP_ARROW: i32 = 65;
-pub const DOWN_ARROW: i32 = 66;
-
-pub const EXIT: i32 = -1;
-pub const CONTINUE: i32 = -2;
-pub const NAVIGATE_VIEW: i32 = -3;
 #[derive(PartialEq, Eq)]
 pub enum Events {
     UpArrow,
@@ -21,12 +15,12 @@ pub enum Events {
 }
 
 impl Events {
-    pub(crate) fn from_int(value: i32) -> Option<Events> {
+    pub(crate) fn from_int(value: i32) -> Events {
         match value {
-            65 => Some(Events::UpArrow),
-            66 => Some(Events::DownArrow),
-            13 => Some(Events::Enter),
-            _ => Some(Events::Unknown)
+            65 => Events::UpArrow,
+            66 => Events::DownArrow,
+            13 => Events::Enter,
+            _ => Events::Unknown
         }
     }
 }
@@ -43,7 +37,7 @@ impl UserInterface {
 
     pub fn new() -> Self {
         Self {
-            current_view:  Box::new(views::bbs_menu::BBSMenu::new())
+            current_view:  Box::new(views::menu_view::BBSMenu::new())
         }
     }
 
@@ -52,15 +46,21 @@ impl UserInterface {
     }
 
     pub fn get_user_event(&self, buffer: &[u8; 3]) -> Events {
-        // TODO Enter button no longer working!
         let event: Events;
         if buffer[0] == 27 && buffer[1] == 91 {
-            event =  Events::from_int(buffer[2] as i32).unwrap()
+            event =  Events::from_int(buffer[2] as i32)
         } else if buffer[0] == 13 {
-            event =  Events::from_int(buffer[0] as i32).unwrap()
+            event =  Events::from_int(buffer[0] as i32)
         } else {
-            event =  Events::from_int(-1).unwrap()
+            event =  Events::from_int(-1)
         }
         event
     }
+
+    pub fn navigate_view(&mut self, view: NavigateTo) {
+        if view == NavigateTo::RoomsView {
+            &self.current_view:  Box::new(views::menu_view::BBSMenu::new())
+        }
+    }
+
 }

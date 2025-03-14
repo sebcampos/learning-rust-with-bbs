@@ -2,9 +2,8 @@ mod db;
 mod views;
 mod input_interface;
 
-use std::io::{Write, Read, BufReader};
+use std::io::{Write, Read};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
 use std::thread;
 use crate::input_interface::UserInterface;
 use crate::input_interface::Events;
@@ -54,7 +53,7 @@ fn main() {
 
 
     for stream in listener.incoming() {
-        println!("Listenter incomming");
+        println!("Listener incoming");
         if let Ok(stream) = stream {
             thread::spawn(move || {
                 handle_client(stream);

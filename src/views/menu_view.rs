@@ -1,13 +1,13 @@
 use std::net::TcpStream;
-use crate::views::base_view::View;
-use crate::input_interface;
+use crate::views::base_view::{NavigateTo, View};
 use crate::input_interface::Events;
-use std::io::{Write, Read, BufReader};
+use std::io::{Write};
 
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct BBSMenu {
     options: Vec<&'static str>,
     selected_index: usize,
+    navigate_to: NavigateTo
 }
 
 impl BBSMenu {
@@ -15,6 +15,7 @@ impl BBSMenu {
         Self {
             options: vec!["🚪 Rooms", "👥 People", "👨‍💻 Me", "❌ Quit"],
             selected_index: 0,
+            navigate_to: NavigateTo::NoneView
         }
     }
 
@@ -36,6 +37,11 @@ impl BBSMenu {
 
 // Implement the `Menu` trait for `BBSMenu`
 impl View for BBSMenu {
+
+    fn get_navigate_to(&self) -> &NavigateTo {
+        &self.navigate_to
+    }
+
     fn render(&self) -> String {
         let mut output = String::from("\x1b[2J\x1b[H"); // Clear screen + move cursor to top
         output.push_str("\x1b[1;32mWelcome to Rust BBS!\x1b[0m\r\n\r\n");
@@ -67,26 +73,4 @@ impl View for BBSMenu {
     fn get_selection(&mut self) -> &str {
         self.options[self.selected_index]
     }
-
-
-    fn handle_event(&mut self, event: Events, stream: &mut TcpStream) ->  Events {
-        let result_event: Events;
-
-        if event == Events::UpArrow {
-            result_event = event;
-            self.move_up();
-        }
-        else if event == Events::DownArrow {
-            result_event = event;
-            self.move_down();
-        }
-        else if event == Events::Enter {
-            result_event = self.handle_selection(stream);
-        }
-        else {
-            result_event = event;
-        }
-        result_event
-    }
-
 }
