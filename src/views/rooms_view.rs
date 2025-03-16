@@ -13,9 +13,11 @@ pub struct RoomsView {
 }
 
 impl RoomsView {
-    pub fn new(self, rooms: HashMap<String, u32>) -> Self {
+    pub fn new(rooms: HashMap<String, u32>) -> Self {
+        let room_names_and_count = rooms.iter().map(|(key, &value)| (key.clone(), value)) // Clone the key and copy the value
+            .collect();
         Self {
-            display_rooms: rooms.iter().collect(),
+            display_rooms: room_names_and_count,
             selected_index: 0,
             rooms,
             navigate_to: NavigateTo::NoneView
@@ -45,8 +47,8 @@ impl RoomsView {
 
 impl View for RoomsView {
 
-    fn get_navigate_to(&self) -> &NavigateTo {
-        &self.navigate_to
+    fn get_navigate_to(self) -> NavigateTo {
+        self.navigate_to
     }
 
     fn render(&self) -> String {
@@ -74,7 +76,11 @@ impl View for RoomsView {
     }
 
     fn get_selection(&mut self) -> &str {
-        self.display_rooms[self.selected_index][0]
+        &self.display_rooms[self.selected_index].0
+    }
+
+    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
+        Events::Exit
     }
 
 }

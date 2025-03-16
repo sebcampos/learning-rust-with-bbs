@@ -1,4 +1,4 @@
-use crate::views;
+use crate::{db, views};
 use crate::views::base_view;
 use crate::views::base_view::NavigateTo;
 
@@ -57,9 +57,10 @@ impl UserInterface {
         event
     }
 
-    pub fn navigate_view(&mut self, view: NavigateTo) {
-        if view == NavigateTo::RoomsView {
-            &self.current_view:  Box::new(views::menu_view::BBSMenu::new())
+    pub fn navigate_view(&mut self, manager: &db::manage::Manager) {
+        if self.current_view.get_navigate_to() == NavigateTo::RoomsView {
+            let rooms = manager.get_rooms();
+            self.current_view =  Box::new(views::rooms_view::RoomsView::new(rooms));
         }
     }
 

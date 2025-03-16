@@ -6,18 +6,22 @@ use crate::input_interface::Events;
 pub enum NavigateTo {
     MenuView,
     RoomsView,
+    PeopleView,
+    MeView,
     NoneView
 }
 
 
 pub trait View {
 
-    fn get_navigate_to(&self) -> &NavigateTo;
+    fn get_navigate_to(self) -> NavigateTo;
 
     fn render(&self) -> String;
     fn move_up(&mut self);
     fn move_down(&mut self);
     fn get_selection(&mut self) -> &str;
+
+    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events;
 
     fn handle_event(&mut self,  event: Events, stream: &mut TcpStream) -> Events {
         let result_event: Events;

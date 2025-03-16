@@ -11,6 +11,7 @@ use crate::input_interface::Events;
 fn handle_client(mut stream: TcpStream) {
 
     let mut user_interface = UserInterface::new();
+    let manager = db::manage::Manager::new();
 
     let disable_line_mode = [
         255, 251, 1,  // IAC WILL ECHO (Disable local echo)
@@ -38,6 +39,8 @@ fn handle_client(mut stream: TcpStream) {
         let view_handle_event = view.handle_event(user_event, s_ref);
         if view_handle_event == Events::Exit {
             break;
+        } else if view_handle_event == Events::NavigateView {
+            user_interface.navigate_view(&manager)
         }
 
         let updated_view = user_interface.get_current_view().render();

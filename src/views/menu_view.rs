@@ -19,27 +19,13 @@ impl BBSMenu {
         }
     }
 
-    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
-        let selection = self.get_selection();
-        let result_event: Events;
-        if selection == "❌ Quit" {
-            stream.write_all(b"\nGoodbye!\n").unwrap();
-            result_event = Events::Exit;
-        } else {
-            stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
-                .unwrap();
-            result_event = Events::NavigateView;
-        }
-        result_event
-    }
-
 }
 
 // Implement the `Menu` trait for `BBSMenu`
 impl View for BBSMenu {
 
-    fn get_navigate_to(&self) -> &NavigateTo {
-        &self.navigate_to
+    fn get_navigate_to(self) -> NavigateTo {
+        self.navigate_to
     }
 
     fn render(&self) -> String {
@@ -73,4 +59,29 @@ impl View for BBSMenu {
     fn get_selection(&mut self) -> &str {
         self.options[self.selected_index]
     }
+
+
+    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
+        let selection = self.get_selection();
+        let result_event: Events;
+        if selection == "❌ Quit" {
+            stream.write_all(b"\nGoodbye!\n").unwrap();
+            result_event = Events::Exit;
+        } else if  selection == "🚪 Rooms" {
+            self.navigate_to = NavigateTo::RoomsView;
+            result_event = Events::NavigateView;
+        } else if  selection == "👥 People" {
+            self.navigate_to = NavigateTo::PeopleView;
+            result_event = Events::NavigateView;
+        } else if  selection == "👨‍💻 Me" {
+            self.navigate_to = NavigateTo::MeView;
+            result_event = Events::NavigateView;
+        } else {
+            stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
+                .unwrap();
+            result_event = Events::NavigateView;
+        }
+        result_event
+    }
+
 }
