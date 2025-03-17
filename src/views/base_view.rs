@@ -14,7 +14,7 @@ pub enum NavigateTo {
 
 pub trait View {
 
-    fn get_navigate_to(self) -> NavigateTo;
+    fn get_navigate_to(&self) -> &NavigateTo;
 
     fn render(&self) -> String;
     fn move_up(&mut self);

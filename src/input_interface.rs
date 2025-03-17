@@ -10,7 +10,9 @@ pub enum Events {
     RightArrow,
     Enter,
     Exit,
+    TAB,
     NavigateView,
+    NavigatePreviousView,
     Unknown
 }
 
@@ -29,7 +31,8 @@ impl Events {
 
 
 pub struct UserInterface {
-    current_view: Box<dyn base_view::View>
+    current_view: Box<dyn base_view::View>,
+    previous_view: Option<NavigateTo>
 }
 
 
@@ -37,7 +40,8 @@ impl UserInterface {
 
     pub fn new() -> Self {
         Self {
-            current_view:  Box::new(views::menu_view::BBSMenu::new())
+            current_view:  Box::new(views::menu_view::BBSMenu::new()),
+            previous_view: None
         }
     }
 
@@ -48,9 +52,13 @@ impl UserInterface {
     pub fn get_user_event(&self, buffer: &[u8; 3]) -> Events {
         let event: Events;
         if buffer[0] == 27 && buffer[1] == 91 {
-            event =  Events::from_int(buffer[2] as i32)
+            event = Events::from_int(buffer[2] as i32)
         } else if buffer[0] == 13 {
-            event =  Events::from_int(buffer[0] as i32)
+            event = Events::from_int(buffer[0] as i32)
+        } else if buffer[0] == b'\t' {
+            event = Events::TAB
+        } else if buffer[0] == 0x1b {
+            event = Events::NavigateView
         } else {
             event =  Events::from_int(-1)
         }
@@ -58,7 +66,8 @@ impl UserInterface {
     }
 
     pub fn navigate_view(&mut self, manager: &db::manage::Manager) {
-        if self.current_view.get_navigate_to() == NavigateTo::RoomsView {
+        let navigate_to = self.current_view.get_navigate_to();
+        if *navigate_to == NavigateTo::RoomsView {
             let rooms = manager.get_rooms();
             self.current_view =  Box::new(views::rooms_view::RoomsView::new(rooms));
         }

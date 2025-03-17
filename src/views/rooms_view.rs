@@ -9,7 +9,8 @@ pub struct RoomsView {
     rooms: HashMap<String, u32>,
     display_rooms: Vec<(String, u32)>,
     selected_index: usize,
-    navigate_to: NavigateTo
+    navigate_to: NavigateTo,
+    selecting_room: bool
 }
 
 impl RoomsView {
@@ -20,7 +21,8 @@ impl RoomsView {
             display_rooms: room_names_and_count,
             selected_index: 0,
             rooms,
-            navigate_to: NavigateTo::NoneView
+            navigate_to: NavigateTo::NoneView,
+            selecting_room: true
         }
     }
     fn get_room(&self, room_name: &str) -> Option<&u32> {
@@ -47,8 +49,8 @@ impl RoomsView {
 
 impl View for RoomsView {
 
-    fn get_navigate_to(self) -> NavigateTo {
-        self.navigate_to
+    fn get_navigate_to(&self) -> &NavigateTo {
+        &self.navigate_to
     }
 
     fn render(&self) -> String {
@@ -57,8 +59,18 @@ impl View for RoomsView {
 
 
         // Append sorted rooms to output
-        for (room, count) in self.display_rooms.iter() {
-            output.push_str(&format!("{}: {} online\n", room, count));
+        for (index, (room, count)) in self.display_rooms.iter().enumerate() {
+            if index == self.selected_index && self.selecting_room {
+                output.push_str(&format!("\x1b[1;33m> {}: {} online\n", room, count));
+            }
+            else {
+                output.push_str(&format!("{}: {} online\n", room, count));
+            }
+        }
+        //output.push_str(&format!("Search Room: "));
+        output.push_str("\nUse ↑ (Arrow Up) / ↓ (Arrow Down) and Enter to select a room, use TAB to search for a room.\r\n");
+        if !self.selecting_room {
+            output.push_str("\x1b[1;33m> Search: ");
         }
         output
     }
@@ -70,7 +82,8 @@ impl View for RoomsView {
     }
 
     fn move_down(&mut self) {
-        if self.selected_index < self.display_rooms.len() - 1 {
+        let display_size: usize = self.display_rooms.len();
+        if display_size > 0 && self.selected_index < display_size - 1 {
             self.selected_index += 1;
         }
     }
@@ -81,6 +94,25 @@ impl View for RoomsView {
 
     fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
         Events::Exit
+    }
+
+    fn handle_event(&mut self, event: Events, stream: &mut TcpStream) -> Events {
+        let result_event: Events;
+
+        if event == Events::TAB && self.selecting_room {
+            // TODO set the input mode to the disabled one
+            self.selecting_room = false;
+            result_event = event;
+        }
+        else if event == Events::TAB && !self.selecting_room {
+            // TODO set the input mode to the original one
+            self.selecting_room = true;
+            result_event = event;
+        }
+        else {
+            result_event = event;
+        }
+        result_event
     }
 
 }

@@ -11,6 +11,9 @@ use crate::input_interface::Events;
 fn handle_client(mut stream: TcpStream) {
 
     let mut user_interface = UserInterface::new();
+
+    // TODO move this to outside the handle_client, or make it so
+    // the create statements are not called during the "new"
     let manager = db::manage::Manager::new();
 
     let disable_line_mode = [

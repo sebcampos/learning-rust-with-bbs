@@ -24,8 +24,8 @@ impl BBSMenu {
 // Implement the `Menu` trait for `BBSMenu`
 impl View for BBSMenu {
 
-    fn get_navigate_to(self) -> NavigateTo {
-        self.navigate_to
+    fn get_navigate_to(&self) -> &NavigateTo {
+        &self.navigate_to
     }
 
     fn render(&self) -> String {
