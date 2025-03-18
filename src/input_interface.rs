@@ -13,6 +13,8 @@ pub enum Events {
     TAB,
     NavigateView,
     NavigatePreviousView,
+    InputModeEnable,
+    InputModeDisable,
     Unknown
 }
 
@@ -32,7 +34,7 @@ impl Events {
 
 pub struct UserInterface {
     current_view: Box<dyn base_view::View>,
-    previous_view: Option<NavigateTo>
+    input_mode: bool
 }
 
 
@@ -41,15 +43,23 @@ impl UserInterface {
     pub fn new() -> Self {
         Self {
             current_view:  Box::new(views::menu_view::BBSMenu::new()),
-            previous_view: None
+            input_mode: false
         }
+    }
+
+    pub fn set_input_mode(&mut self, active: bool) {
+        self.input_mode = active;
+    }
+
+    pub fn is_in_input_mode(&self) -> bool {
+        self.input_mode
     }
 
     pub fn get_current_view(&mut self) -> &mut dyn base_view::View {
         self.current_view.as_mut()
     }
 
-    pub fn get_user_event(&self, buffer: &[u8; 3]) -> Events {
+    pub fn get_user_event(&self, buffer: &[u8]) -> Events {
         let event: Events;
         if buffer[0] == 27 && buffer[1] == 91 {
             event = Events::from_int(buffer[2] as i32)

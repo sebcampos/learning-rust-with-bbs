@@ -1,3 +1,4 @@
+use std::format;
 use std::net::TcpStream;
 use crate::input_interface::Events;
 
@@ -23,7 +24,7 @@ pub trait View {
 
     fn handle_selection(&mut self, stream: &mut TcpStream) -> Events;
 
-    fn handle_event(&mut self,  event: Events, stream: &mut TcpStream) -> Events {
+    fn handle_event(&mut self,  event: Events, stream: &mut TcpStream, buffer: Option<&[u8]>) -> Events {
         let result_event: Events;
 
         if event == Events::UpArrow {
@@ -42,4 +43,5 @@ pub trait View {
         }
         result_event
     }
+
 }

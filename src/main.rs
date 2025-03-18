@@ -24,8 +24,9 @@ fn handle_client(mut stream: TcpStream) {
     stream.write_all(&disable_line_mode).unwrap();
     stream.flush().unwrap();
     let s_ref: &mut TcpStream = &mut stream;
-
-    let mut buffer = [0; 3]; // To capture arrow keys (escape sequences)
+    let mut buffer: Vec<u8> = Vec::new();
+    buffer.insert(0, 1);
+    //let mut buffer = [u8]; // To capture arrow keys (escape sequences)
     while let Ok(n) = s_ref.read(&mut buffer) {
 
         if n == 0 {
@@ -37,13 +38,34 @@ fn handle_client(mut stream: TcpStream) {
         if user_event == Events::Exit {
             break;
         }
-
+        let is_in_input_mode = user_interface.is_in_input_mode();
         let mut view = user_interface.get_current_view();
-        let view_handle_event = view.handle_event(user_event, s_ref);
+        let view_handle_event: Events;
+
+        if is_in_input_mode {
+            view_handle_event = view.handle_event(user_event, s_ref, Some(&buffer));
+        }
+        else {
+            view_handle_event = view.handle_event(user_event, s_ref, None);
+        }
         if view_handle_event == Events::Exit {
             break;
         } else if view_handle_event == Events::NavigateView {
             user_interface.navigate_view(&manager)
+        } else if view_handle_event == Events::InputModeDisable {
+            let disable_line_mode = [
+                255, 251, 1,  // IAC WILL ECHO (Disable local echo)
+                255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)
+            ];
+            s_ref.write_all(&disable_line_mode).unwrap();
+            user_interface.set_input_mode(false)
+        } else if view_handle_event == Events::InputModeEnable {
+            let enable_line_mode = [
+                255, 252, 1,  // IAC WILL ECHO (Enable local echo)
+                255, 252, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Enable line buffering)
+            ];
+            s_ref.write_all(&enable_line_mode).unwrap();
+            user_interface.set_input_mode(true)
         }
 
         let updated_view = user_interface.get_current_view().render();

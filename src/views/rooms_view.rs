@@ -2,7 +2,7 @@ use std::net::TcpStream;
 use crate::views::base_view::{NavigateTo, View};
 use crate::input_interface::Events;
 use std::collections::HashMap;
-
+use std::io::{Read, Write};
 
 //#[derive(Clone)]
 pub struct RoomsView {
@@ -96,17 +96,21 @@ impl View for RoomsView {
         Events::Exit
     }
 
-    fn handle_event(&mut self, event: Events, stream: &mut TcpStream) -> Events {
+    fn handle_event(&mut self, event: Events, stream: &mut TcpStream, buffer: Option<&[u8]>) -> Events {
         let result_event: Events;
 
+        // if tab is hit during room selection
+        // set selecting room to false and enable input mode
         if event == Events::TAB && self.selecting_room {
-            // TODO set the input mode to the disabled one
             self.selecting_room = false;
-            result_event = event;
+            result_event = Events::InputModeEnable;
         }
-        else if event == Events::TAB && !self.selecting_room {
-            // TODO set the input mode to the original one
+        //
+        else if !self.selecting_room && std::str::from_utf8(buffer.unwrap()).unwrap() == "q" {
             self.selecting_room = true;
+            result_event = Events::InputModeDisable;
+        }
+        else if !self.selecting_room && std::str::from_utf8(buffer.unwrap()).unwrap() != "q" {
             result_event = event;
         }
         else {
