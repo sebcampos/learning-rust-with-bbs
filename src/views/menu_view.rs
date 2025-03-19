@@ -6,15 +6,17 @@ use std::io::{Write};
 //#[derive(Clone)]
 pub struct BBSMenu {
     options: Vec<&'static str>,
+    user_id: i32,
     selected_index: usize,
     navigate_to: NavigateTo
 }
 
 impl BBSMenu {
-    pub fn new() -> Self {
+    pub fn new(user_id: i32) -> Self {
         Self {
             options: vec!["🚪 Rooms", "👥 People", "👨‍💻 Me", "❌ Quit"],
             selected_index: 0,
+            user_id,
             navigate_to: NavigateTo::NoneView
         }
     }
@@ -23,7 +25,6 @@ impl BBSMenu {
 
 // Implement the `Menu` trait for `BBSMenu`
 impl View for BBSMenu {
-
     fn get_navigate_to(&self) -> &NavigateTo {
         &self.navigate_to
     }
@@ -58,6 +59,10 @@ impl View for BBSMenu {
 
     fn get_selection(&mut self) -> &str {
         self.options[self.selected_index]
+    }
+
+    fn get_user_id(&self) -> i32 {
+        self.user_id
     }
 
 

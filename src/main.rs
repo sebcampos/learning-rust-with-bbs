@@ -1,7 +1,7 @@
 mod db;
 mod views;
 mod input_interface;
-
+use db::manage::Manager;
 use std::io::{Write, Read};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -14,7 +14,7 @@ fn handle_client(mut stream: TcpStream) {
 
     // TODO move this to outside the handle_client, or make it so
     // the create statements are not called during the "new"
-    let manager = db::manage::Manager::new();
+
 
     let disable_line_mode = [
         255, 251, 1,  // IAC WILL ECHO (Disable local echo)
@@ -24,8 +24,8 @@ fn handle_client(mut stream: TcpStream) {
     stream.write_all(&disable_line_mode).unwrap();
     stream.flush().unwrap();
     let s_ref: &mut TcpStream = &mut stream;
-    let mut buffer: Vec<u8> = Vec::new();
-    buffer.insert(0, 1);
+    let mut buffer: Vec<u8> = vec![0; 30];
+
     //let mut buffer = [u8]; // To capture arrow keys (escape sequences)
     while let Ok(n) = s_ref.read(&mut buffer) {
 
@@ -34,8 +34,9 @@ fn handle_client(mut stream: TcpStream) {
         }
 
 
-        let user_event = user_interface.get_user_event(&buffer);
+        let user_event = UserInterface::get_user_event(&buffer);
         if user_event == Events::Exit {
+            s_ref.write_all("\x1b[1;32mGoodbye!\x1b[0m\r\n\r\n".to_string().as_bytes()).unwrap();
             break;
         }
         let is_in_input_mode = user_interface.is_in_input_mode();
@@ -43,7 +44,8 @@ fn handle_client(mut stream: TcpStream) {
         let view_handle_event: Events;
 
         if is_in_input_mode {
-            view_handle_event = view.handle_event(user_event, s_ref, Some(&buffer));
+            let buffer_string = UserInterface::clean_buffer(&buffer);
+            view_handle_event = view.handle_event(user_event, s_ref, Some(buffer_string));
         }
         else {
             view_handle_event = view.handle_event(user_event, s_ref, None);
@@ -51,7 +53,7 @@ fn handle_client(mut stream: TcpStream) {
         if view_handle_event == Events::Exit {
             break;
         } else if view_handle_event == Events::NavigateView {
-            user_interface.navigate_view(&manager)
+            user_interface.navigate_view()
         } else if view_handle_event == Events::InputModeDisable {
             let disable_line_mode = [
                 255, 251, 1,  // IAC WILL ECHO (Disable local echo)
@@ -66,18 +68,29 @@ fn handle_client(mut stream: TcpStream) {
             ];
             s_ref.write_all(&enable_line_mode).unwrap();
             user_interface.set_input_mode(true)
+        } else if view_handle_event == Events::Authenticate {
+            user_interface.set_user_id();
+            user_interface.navigate_view();
+            let disable_line_mode = [
+                255, 251, 1,  // IAC WILL ECHO (Disable local echo)
+                255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)
+            ];
+            s_ref.write_all(&disable_line_mode).unwrap();
         }
 
         let updated_view = user_interface.get_current_view().render();
         s_ref.write_all(updated_view.as_bytes()).unwrap();
         s_ref.flush().unwrap();
+        // reset the buffer
+        buffer = vec![0; 30];
+
     }
 }
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:2323").expect("Could not start server");
     println!("Telnet BBS started on port 2323...");
-
+    Manager::setup_db();
 
 
     for stream in listener.incoming() {

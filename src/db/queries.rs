@@ -2,7 +2,6 @@
 pub(crate) const CREATE_USERS: &str = "CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     created_date DATETIME DEFAULT CURRENT_TIMESTAMP
 )";
@@ -38,3 +37,11 @@ pub(crate) const CREATE_DIRECT_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS dire
 
 
 pub(crate) const GET_ROOMS: &str = "SELECT * FROM rooms ORDER BY online LIMIT 20";
+
+pub(crate) const SEARCH_ROOMS: &str = "SELECT * FROM rooms where name LIKE ? LIMIT 20";
+
+pub(crate) const SEARCH_USER: &str = "SELECT * FROM users WHERE username = ?";
+
+pub(crate) const CREATE_NEW_ROOM: &str = "INSERT INTO rooms (name, owner_id) VALUES (?, ?)";
+
+pub(crate) const CREATE_NEW_USER: &str = "INSERT INTO users (username, password_hash) VALUES (?, ?)";

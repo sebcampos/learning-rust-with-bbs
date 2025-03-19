@@ -22,9 +22,11 @@ pub trait View {
     fn move_down(&mut self);
     fn get_selection(&mut self) -> &str;
 
+    fn get_user_id(&self) -> i32;
+
     fn handle_selection(&mut self, stream: &mut TcpStream) -> Events;
 
-    fn handle_event(&mut self,  event: Events, stream: &mut TcpStream, buffer: Option<&[u8]>) -> Events {
+    fn handle_event(&mut self,  event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {
         let result_event: Events;
 
         if event == Events::UpArrow {
