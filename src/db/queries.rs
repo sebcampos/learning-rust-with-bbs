@@ -1,6 +1,7 @@
 // might need to make this public
 pub(crate) const CREATE_USERS: &str = "CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    logged_in INTEGER NOT NULL DEFAULT 0,
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     created_date DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -45,3 +46,7 @@ pub(crate) const SEARCH_USER: &str = "SELECT * FROM users WHERE username = ?";
 pub(crate) const CREATE_NEW_ROOM: &str = "INSERT INTO rooms (name, owner_id) VALUES (?, ?)";
 
 pub(crate) const CREATE_NEW_USER: &str = "INSERT INTO users (username, password_hash) VALUES (?, ?)";
+
+pub(crate) const LOGIN_USER: &str = "UPDATE users SET logged_in = 1 WHERE id = ?";
+
+pub(crate) const LOGOUT_USER: &str = "UPDATE users SET logged_in = 0 WHERE id = ?";

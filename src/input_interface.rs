@@ -23,7 +23,10 @@ pub enum Events {
     NavigateView,
     InputModeEnable,
     InputModeDisable,
-    Unknown
+    Unknown,
+    RoomJoin,
+    RoomLeave,
+    MessageSent
 }
 
 impl Events {
@@ -61,6 +64,10 @@ impl UserInterface {
             current_view:  Box::new(LoginRegisterView::new()),
             input_mode: false
         }
+    }
+
+    pub fn get_user_id(&self) -> i32 {
+        self.user_id
     }
 
     pub fn set_user_id(&mut self) {

@@ -60,6 +60,7 @@ impl LoginRegisterView {
         }
         else {
             self.user_id = user_id;
+            Manager::login_user(self.user_id);
             self.navigate_to = NavigateTo::MenuView;
             result_event = Events::Authenticate;
         }

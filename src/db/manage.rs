@@ -1,29 +1,35 @@
 use std::collections::HashMap;
 use crate::db::connection::get_db_connection;
 use crate::db::queries;
-use rusqlite::{params};
 use bcrypt::{hash, DEFAULT_COST};
 use bcrypt::{verify};
 
 pub struct Manager;
 
+pub struct User {
+
+}
 
 
 impl Manager {
 
 
+    pub fn login_user(user_id: i32) {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::LOGIN_USER).unwrap();
+        stmt.execute([&user_id]).expect("Failed to login user");
+    }
+
+    pub fn logout_user(user_id: i32) {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::LOGIN_USER).unwrap();
+        stmt.execute([&user_id]).expect("Failed to login user");
+    }
+
     pub fn create_user(username: &String, password: &String) -> i32 {
         let password_hash = hash(password, DEFAULT_COST).expect("Failed to hash password");
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::CREATE_NEW_USER).unwrap();
-
-        // Execute the query and collect the rows into a HashMap
-        // let affected_rows = stmt.execute([&username, &password_hash]).unwrap();
-        // if affected_rows >  0 {
-        //     let user_id = conn.last_insert_rowid() as i32;
-        //     return user_id;
-        // }
-
         match stmt.execute([&username, &password_hash]) {
             Ok(affected_rows) => {
                 if affected_rows > 0 {
@@ -126,5 +132,7 @@ impl Manager {
         println!("Database setup complete! ✅")
 
     }
+
+    pub fn get_user(user_id: i32) {}
 
 }
