@@ -1,6 +1,10 @@
 # Learning Rust with a BBS system
 Working on a bbs in rust to learn rust
  
+## TODOS
+- remove user_id logic from views, use the value from UserInterface instance instead
+- define get_navigate_to in the trait view instead of each view
+
 
 ## Notes
 - rules of ownership have different implications depending on whether our data is stored on the stack or the heap.

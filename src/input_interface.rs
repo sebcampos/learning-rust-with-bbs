@@ -1,9 +1,11 @@
-use crate::{views};
 use crate::views::login_register_view::LoginRegisterView;
+use crate::views::rooms_view::RoomsView;
 use crate::views::base_view::View;
 use std::str;
-use crate::views::base_view;
+use std::sync::{Arc, Mutex};
 use crate::views::base_view::NavigateTo;
+use crate::views::menu_view::BBSMenu;
+use crate::views::users_view::UsersView;
 
 #[derive(PartialEq, Eq)]
 pub enum Events {
@@ -22,11 +24,13 @@ pub enum Events {
     Authenticate,
     NavigateView,
     InputModeEnable,
+    SecretInputModeEnable,
     InputModeDisable,
     Unknown,
     RoomJoin,
     RoomLeave,
-    MessageSent
+    MessageSent,
+    UserView,
 }
 
 impl Events {
@@ -50,19 +54,23 @@ impl Events {
 
 
 pub struct UserInterface {
-    current_view: Box<dyn View>,
+    current_view:  Arc<Mutex<dyn View>>,
+    current_room: i32,
     input_mode: bool,
-    user_id: i32
+    user_id: i32,
 }
 
 
 impl UserInterface {
 
     pub fn new() -> Self {
+        let login_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(LoginRegisterView::new()));
+
         Self {
             user_id: -1,
-            current_view:  Box::new(LoginRegisterView::new()),
-            input_mode: false
+            current_view:  login_view,
+            input_mode: false,
+            current_room: -1,
         }
     }
 
@@ -70,9 +78,18 @@ impl UserInterface {
         self.user_id
     }
 
+    pub fn set_current_room_id(&mut self, room_id: i32) {
+        self.current_room = room_id;
+    }
+
+    pub fn get_current_room_id(&self) -> i32 {
+        self.current_room
+    }
+
     pub fn set_user_id(&mut self) {
         let login_view = self.get_current_view();
-        self.user_id = login_view.get_user_id();
+        let user_id = login_view.lock().unwrap().get_user_id();
+        self.user_id = user_id;
     }
 
     pub fn set_input_mode(&mut self, active: bool) {
@@ -83,8 +100,8 @@ impl UserInterface {
         self.input_mode
     }
 
-    pub fn get_current_view(&mut self) -> &mut dyn base_view::View {
-        self.current_view.as_mut()
+    pub fn get_current_view(&mut self) -> Arc<Mutex<dyn View>> {
+        Arc::clone(&self.current_view)
     }
 
     pub fn get_user_event(buffer: &[u8]) -> Events {
@@ -122,12 +139,31 @@ impl UserInterface {
     }
 
     pub fn navigate_view(&mut self) {
-        let navigate_to = self.current_view.get_navigate_to();
+        let user_id = self.get_user_id();
+        let binding = self.get_current_view();
+        let view = binding.lock().unwrap();
+        let navigate_to = view.get_navigate_to();
+
+
+        // TODO these views being singleton might be a problem
+
         if *navigate_to == NavigateTo::RoomsView {
-            self.current_view =  Box::new(views::rooms_view::RoomsView::new(self.user_id));
+            let rooms_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomsView::new(user_id)));
+            //drop(view); // Explicitly unlocks the MutexGuard here
+            self.current_view= rooms_view
+            //self.current_view =  Box::new(views::rooms_view::RoomsView::new(self.user_id));
         }
         else if *navigate_to == NavigateTo::MenuView {
-            self.current_view =  Box::new(views::menu_view::BBSMenu::new(self.user_id));
+            let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(BBSMenu::new(user_id)));
+            //drop(view); // Explicitly unlocks the MutexGuard here
+            self.current_view = menu_view
+            //self.current_view =  Box::new(views::menu_view::BBSMenu::new(self.user_id));
+        }
+        else if *navigate_to == NavigateTo::PeopleView {
+            let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UsersView::new(user_id)));
+            //drop(view); // Explicitly unlocks the MutexGuard here
+            self.current_view = menu_view
+            //self.current_view =  Box::new(views::menu_view::BBSMenu::new(self.user_id));
         }
     }
 

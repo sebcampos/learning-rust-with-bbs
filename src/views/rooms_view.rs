@@ -146,7 +146,7 @@ impl View for RoomsView {
         else if event == Events::Enter {
             result_event = self.handle_selection(stream);
         }
-        else if event == Events::KeyH
+        else if event == Events::KeyH && !(self.creating_room  || self.searching_room)
         {
             self.navigate_to = NavigateTo::MenuView;
             result_event = Events::NavigateView;
@@ -169,7 +169,7 @@ impl View for RoomsView {
                 result_event = Events::InputModeDisable;
             } else if self.creating_room && buffer_str.trim() != "" {
                 // TODO get the user id here
-                Manager::create_room(buffer_str, "1".to_string());
+                Manager::create_room(buffer_str, self.user_id.to_string());
                 let room_query = Manager::get_rooms();
                 self.refresh_rooms(room_query);
                 self.set_context_state("selecting_room");

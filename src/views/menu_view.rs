@@ -70,7 +70,6 @@ impl View for BBSMenu {
         let selection = self.get_selection();
         let result_event: Events;
         if selection == "❌ Quit" {
-            stream.write_all(b"\nGoodbye!\n").unwrap();
             result_event = Events::Exit;
         } else if  selection == "🚪 Rooms" {
             self.navigate_to = NavigateTo::RoomsView;

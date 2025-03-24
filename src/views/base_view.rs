@@ -1,4 +1,3 @@
-use std::format;
 use std::net::TcpStream;
 use crate::input_interface::Events;
 
@@ -13,7 +12,7 @@ pub enum NavigateTo {
 }
 
 
-pub trait View {
+pub trait View: Send {
 
     fn get_navigate_to(&self) -> &NavigateTo;
 

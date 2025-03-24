@@ -39,6 +39,8 @@ pub(crate) const CREATE_DIRECT_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS dire
 
 pub(crate) const GET_ROOMS: &str = "SELECT * FROM rooms ORDER BY online LIMIT 20";
 
+pub(crate) const GET_ROOM_BY_NAME: &str = "SELECT id FROM rooms WHERE name = ?";
+
 pub(crate) const SEARCH_ROOMS: &str = "SELECT * FROM rooms where name LIKE ? LIMIT 20";
 
 pub(crate) const SEARCH_USER: &str = "SELECT * FROM users WHERE username = ?";
@@ -50,3 +52,11 @@ pub(crate) const CREATE_NEW_USER: &str = "INSERT INTO users (username, password_
 pub(crate) const LOGIN_USER: &str = "UPDATE users SET logged_in = 1 WHERE id = ?";
 
 pub(crate) const LOGOUT_USER: &str = "UPDATE users SET logged_in = 0 WHERE id = ?";
+
+pub(crate) const JOIN_ROOM: &str = "UPDATE rooms SET online = online + 1 WHERE id = ?";
+
+pub(crate) const LEAVE_ROOM: &str = "UPDATE rooms SET online = online - 1 WHERE id = ?";
+
+pub(crate) const GET_ONLINE_USERS: &str = "SELECT username, logged_in FROM users ORDER BY logged_in LIMIT 20";
+
+pub(crate) const SEARCH_USERS: &str = "SELECT * FROM users where username LIKE ? LIMIT 20";

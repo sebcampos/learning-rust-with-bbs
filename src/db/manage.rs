@@ -14,6 +14,18 @@ pub struct User {
 impl Manager {
 
 
+    pub fn add_to_room_online(room_id: i32) {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::JOIN_ROOM).unwrap();
+        stmt.execute([&room_id]).expect("Failed to add to room");
+    }
+
+    pub fn subtract_from_room_online(room_id: i32) {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::LEAVE_ROOM).unwrap();
+        stmt.execute([&room_id]).expect("Failed to subtract from room");
+    }
+
     pub fn login_user(user_id: i32) {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::LOGIN_USER).unwrap();
@@ -22,8 +34,8 @@ impl Manager {
 
     pub fn logout_user(user_id: i32) {
         let conn = get_db_connection().lock().unwrap();
-        let mut stmt = conn.prepare(queries::LOGIN_USER).unwrap();
-        stmt.execute([&user_id]).expect("Failed to login user");
+        let mut stmt = conn.prepare(queries::LOGOUT_USER).unwrap();
+        stmt.execute([&user_id]).expect("Failed to logout user");
     }
 
     pub fn create_user(username: &String, password: &String) -> i32 {
@@ -134,5 +146,66 @@ impl Manager {
     }
 
     pub fn get_user(user_id: i32) {}
+
+    pub fn get_online_users() -> HashMap<String, bool> {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::GET_ONLINE_USERS).unwrap();
+        let mut rows = stmt.query([]).unwrap();
+        let mut users: HashMap<String, bool> = HashMap::new();
+
+
+        while let Some(row) = rows.next().unwrap() {
+
+            let name: String = row.get("username").unwrap();
+            let logged_in: i32 = row.get("logged_in").unwrap();
+            let online: bool;
+            if logged_in == 1 {
+                online = true;
+            }
+            else {
+                online = false;
+            }
+
+            // Insert the result into the HashMap, here id is the key and name is the value
+            users.insert(name, online);
+        }
+
+        users
+    }
+
+    pub fn get_room_id_by_name(room_name: &str) -> i32{
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::GET_ROOM_BY_NAME).unwrap();
+        let mut rows = stmt.query([&room_name]).unwrap();
+
+        if let Some(user) = rows.next().unwrap() {
+            let id: i32 = user.get("id").unwrap();
+            id
+        } else {
+            -1
+        }
+    }
+    pub fn search_users(username_query: String) -> HashMap<String, bool> {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::SEARCH_USER).unwrap();
+        let pattern = format!("%{}%", username_query);
+        let mut rows = stmt.query([&pattern]).unwrap();
+
+        // Create an empty HashMap to store the results
+        let mut users: HashMap<String, bool> = HashMap::new();
+
+
+        while let Some(row) = rows.next().unwrap() {
+
+            let name: String = row.get("username").unwrap();
+            let online: bool = row.get("logged_in").unwrap();
+
+            // Insert the result into the HashMap, here id is the key and name is the value
+            users.insert(name, online);
+        }
+
+        // Return the populated HashMap
+        users
+    }
 
 }

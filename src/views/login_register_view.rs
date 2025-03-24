@@ -161,7 +161,7 @@ impl View for LoginRegisterView {
                 self.username = buffer_str.trim().to_string();
                 self.collecting_username = false;
                 self.collecting_password = true;
-                result_event = event;
+                result_event = Events::SecretInputModeEnable;
             }
             else if self.collecting_password && buffer_str.trim() != "" {
                 self.password = buffer_str.trim().to_string();
