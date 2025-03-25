@@ -16,7 +16,7 @@ pub(crate) const CREATE_ROOMS: &str = "CREATE TABLE IF NOT EXISTS rooms (
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 )";
 
-pub(crate) const CREATE_ROOM_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS room_messages (
+pub(crate) const CREATE_ROOM_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     message TEXT NOT NULL,
     user_id INTEGER,
@@ -62,3 +62,7 @@ pub(crate) const GET_ONLINE_USERS: &str = "SELECT username, logged_in FROM users
 pub(crate) const SEARCH_USERS: &str = "SELECT * FROM users where username LIKE ? LIMIT 20";
 
 pub(crate) const GET_USER: &str = "SELECT * FROM users WHERE id = ?";
+
+pub(crate) const GET_USER_BY_NAME: &str = "SELECT id FROM users WHERE username = ?";
+
+pub(crate) const GET_MESSAGES_FOR_ROOM: &str = "SELECT m.created_date, u.username, m.message FROM messages AS m  LEFT JOIN users AS u ON m.user_id = u.id WHERE m.room_id = ?";

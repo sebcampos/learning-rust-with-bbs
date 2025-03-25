@@ -6,6 +6,7 @@ use crate::input_interface::Events;
 pub enum NavigateTo {
     MenuView,
     RoomsView,
+    RoomView,
     PeopleView,
     MeView,
     DirectMessageView,

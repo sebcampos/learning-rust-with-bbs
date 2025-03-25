@@ -11,6 +11,7 @@ use std::thread;
 use crate::input_interface::UserInterface;
 use crate::input_interface::Events;
 use crossbeam_channel::{unbounded, Sender, Receiver};
+use crate::views::base_view::NavigateTo;
 
 fn remove_user_from_room(room_id: i32, tx_list: Arc<Mutex<Vec<Sender<String>>>>) {
     if room_id > 0 {
@@ -118,7 +119,17 @@ fn handle_client(mut stream: TcpStream, rx: Receiver<String>, tx_list: Arc<Mutex
             s_ref.write_all("\x1b[1;32mGoodbye!\x1b[0m\r\n\r\n".to_string().as_bytes()).unwrap();
             break;
         } else if view_handle_event == Events::NavigateView {
-            ui.navigate_view()
+            let navigate_arg: Option<i32>;
+            {
+                let binding = ui.get_current_view();
+                let mut view = binding.lock().unwrap();
+                if *view.get_navigate_to() == NavigateTo::UserView {
+                    let parsed_id: i32 = Manager::get_user_id_by_name(view.get_selection());
+                    navigate_arg = Some(parsed_id);
+                }
+                else { navigate_arg = None; }
+            }
+            ui.navigate_view(navigate_arg);
         } else if view_handle_event == Events::InputModeDisable {
             let disable_line_mode = [
                 255, 251, 1,  // IAC WILL ECHO (Disable local echo)
@@ -142,7 +153,7 @@ fn handle_client(mut stream: TcpStream, rx: Receiver<String>, tx_list: Arc<Mutex
             ui.set_input_mode(true)
         } else if view_handle_event == Events::Authenticate {
             ui.set_user_id();
-            ui.navigate_view();
+            ui.navigate_view(None);
             let disable_line_mode = [
                 255, 251, 1,  // IAC WILL ECHO (Disable local echo)
                 255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)

@@ -49,7 +49,9 @@ pub fn handle_broadcast_event(raw_event: &str, ui: UserInterface) {
     // TODO maybe pass the UI instance in here
     let json: Value = serde_json::from_str(raw_event).unwrap();
     if json["event_type"] == "room_message" {
+        if json["room_id"] == ui.get_current_room_id() {
 
+        }
     }
 
 

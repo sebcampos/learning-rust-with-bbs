@@ -1,5 +1,6 @@
 use crate::views::login_register_view::LoginRegisterView;
 use crate::views::rooms_view::RoomsView;
+use crate::views::room_view::RoomView;
 use crate::views::base_view::View;
 use std::str;
 use std::sync::{Arc, Mutex};
@@ -22,6 +23,7 @@ pub enum Events {
     KeyH,
     KeyC,
     CntrlN,
+    CntrlQ,
     Authenticate,
     NavigateView,
     InputModeEnable,
@@ -40,6 +42,7 @@ impl Events {
             3  => Events::Exit, // Cntrl+C
             13 => Events::Enter,
             14 => Events::CntrlN,
+            17 => Events::CntrlQ,
             65 => Events::UpArrow,
             66 => Events::DownArrow,
             99 => Events::KeyC,
@@ -59,7 +62,6 @@ pub struct UserInterface {
     current_room: i32,
     input_mode: bool,
     user_id: i32,
-    view_user_id: i32,
 }
 
 
@@ -73,7 +75,6 @@ impl UserInterface {
             current_view:  login_view,
             input_mode: false,
             current_room: -1,
-            view_user_id: -1,
         }
     }
 
@@ -141,9 +142,9 @@ impl UserInterface {
         buffer_string.trim().to_string()
     }
 
-    pub fn navigate_view(&mut self) {
+    pub fn navigate_view(&mut self, view_user_id: Option<i32>) {
         let user_id = self.get_user_id();
-        let view_user_id = self.view_user_id;
+        let view_user_id = view_user_id.unwrap_or(-1);
         let binding = self.get_current_view();
         let view = binding.lock().unwrap();
         let navigate_to = view.get_navigate_to();
@@ -175,6 +176,16 @@ impl UserInterface {
             //drop(view); // Explicitly unlocks the MutexGuard here
 
             self.current_view =  myself_view;
+        }
+
+        else if *navigate_to == NavigateTo::UserView {
+            let user_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UserView::new(view_user_id, false)));
+            self.current_view = user_view;
+        }
+
+        else if *navigate_to == NavigateTo::RoomView {
+            let user_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomView::new(view_user_id)));
+            self.current_view = user_view;
         }
     }
 

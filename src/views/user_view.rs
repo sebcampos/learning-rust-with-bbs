@@ -80,8 +80,7 @@ impl View for UserView {
     fn handle_event(&mut self, event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {
         let result_event: Events;
 
-        if event == Events::KeyS
-        {
+        if event == Events::KeyS {
             self.navigate_to = NavigateTo::DirectMessageView;
             result_event = Events::NavigateView
         } else if event == Events::KeyH {
