@@ -60,3 +60,5 @@ pub(crate) const LEAVE_ROOM: &str = "UPDATE rooms SET online = online - 1 WHERE 
 pub(crate) const GET_ONLINE_USERS: &str = "SELECT username, logged_in FROM users ORDER BY logged_in LIMIT 20";
 
 pub(crate) const SEARCH_USERS: &str = "SELECT * FROM users where username LIKE ? LIMIT 20";
+
+pub(crate) const GET_USER: &str = "SELECT * FROM users WHERE id = ?";

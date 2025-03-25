@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use crate::views::base_view::NavigateTo;
 use crate::views::menu_view::BBSMenu;
 use crate::views::users_view::UsersView;
+use crate::views::user_view::UserView;
 
 #[derive(PartialEq, Eq)]
 pub enum Events {
@@ -30,7 +31,7 @@ pub enum Events {
     RoomJoin,
     RoomLeave,
     MessageSent,
-    UserView,
+    UserView
 }
 
 impl Events {
@@ -58,6 +59,7 @@ pub struct UserInterface {
     current_room: i32,
     input_mode: bool,
     user_id: i32,
+    view_user_id: i32,
 }
 
 
@@ -71,6 +73,7 @@ impl UserInterface {
             current_view:  login_view,
             input_mode: false,
             current_room: -1,
+            view_user_id: -1,
         }
     }
 
@@ -140,6 +143,7 @@ impl UserInterface {
 
     pub fn navigate_view(&mut self) {
         let user_id = self.get_user_id();
+        let view_user_id = self.view_user_id;
         let binding = self.get_current_view();
         let view = binding.lock().unwrap();
         let navigate_to = view.get_navigate_to();
@@ -164,6 +168,13 @@ impl UserInterface {
             //drop(view); // Explicitly unlocks the MutexGuard here
             self.current_view = menu_view
             //self.current_view =  Box::new(views::menu_view::BBSMenu::new(self.user_id));
+        }
+
+        else if *navigate_to == NavigateTo::MeView {
+            let myself_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UserView::new(user_id, true)));
+            //drop(view); // Explicitly unlocks the MutexGuard here
+
+            self.current_view =  myself_view;
         }
     }
 

@@ -8,6 +8,8 @@ pub enum NavigateTo {
     RoomsView,
     PeopleView,
     MeView,
+    DirectMessageView,
+    UserView,
     NoneView
 }
 

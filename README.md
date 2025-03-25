@@ -4,7 +4,8 @@ Working on a bbs in rust to learn rust
 ## TODOS
 - remove user_id logic from views, use the value from UserInterface instance instead
 - define get_navigate_to in the trait view instead of each view
-
+- Add Next page / Pagination for displaying online users, messages, and rooms
+- see if you can send the event class as part of the broadcast message instead of a string
 
 ## Notes
 - rules of ownership have different implications depending on whether our data is stored on the stack or the heap.

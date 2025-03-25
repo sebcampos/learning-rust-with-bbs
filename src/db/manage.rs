@@ -145,8 +145,27 @@ impl Manager {
 
     }
 
-    pub fn get_user(user_id: i32) {}
+    pub fn get_user(user_id: i32)  -> HashMap<String, String> {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::GET_USER).unwrap();
+        let mut rows = stmt.query([&user_id]).unwrap();
+        let mut user: HashMap<String, String> = HashMap::new();
 
+
+        while let Some(row) = rows.next().unwrap() {
+
+            let name: String = row.get("username").unwrap();
+            let logged_in: i32 = row.get("logged_in").unwrap();
+            let created_date: String = row.get("created_date").unwrap();
+
+            // Insert the result into the HashMap, here id is the key and name is the value
+            user.insert("username".to_string(), name);
+            user.insert("online".to_string(), logged_in.to_string());
+            user.insert("created_date".to_string(), created_date);
+        }
+
+        user
+    }
     pub fn get_online_users() -> HashMap<String, bool> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_ONLINE_USERS).unwrap();

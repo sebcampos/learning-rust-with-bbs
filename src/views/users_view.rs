@@ -110,7 +110,8 @@ impl View for UsersView {
 
 
     fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
-        Events::UserView
+        self.navigate_to = NavigateTo::UserView;
+        Events::NavigateView
     }
 
     fn handle_event(&mut self, event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {
