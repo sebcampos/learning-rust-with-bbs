@@ -23,6 +23,7 @@ pub enum Events {
     KeyS,
     KeyH,
     KeyC,
+    KeyR,
     CntrlN,
     CntrlQ,
     Authenticate,
@@ -35,7 +36,10 @@ pub enum Events {
     RoomLeave,
     DirectMessageSent,
     RoomMessageSent,
-    UserView
+    UserView,
+    EchoModeEnable,
+    EchoModeDisable,
+    Delete
 }
 
 impl Events {
@@ -50,6 +54,7 @@ impl Events {
             99 => Events::KeyC,
             104 => Events::KeyH,
             110 => Events::KeyN,
+            114 => Events::KeyR,
             115 => Events::KeyS,
             _ => Events::Unknown
         }
@@ -64,6 +69,8 @@ pub struct UserInterface {
     current_room: i32,
     input_mode: bool,
     user_id: i32,
+    echo_mode: bool,
+    current_msg: String,
 }
 
 
@@ -77,7 +84,34 @@ impl UserInterface {
             current_view:  login_view,
             input_mode: false,
             current_room: -1,
+            current_msg: String::new(),
+            echo_mode: false,
         }
+    }
+
+    pub fn set_echo_mode(&mut self, mode: bool)
+    {
+        self.echo_mode = mode;
+    }
+
+    pub fn is_in_echo_mode(&self) -> bool
+    {
+        self.echo_mode
+    }
+
+    pub fn add_to_current_message(&mut self, message: &str)
+    {
+        self.current_msg += message;
+    }
+
+    pub fn clear_current_message(&mut self)
+    {
+        self.current_msg = String::new();
+    }
+
+
+    pub fn get_current_message(&self) -> String {
+        self.current_msg.clone()
     }
 
     pub fn get_user_id(&self) -> i32 {
@@ -151,10 +185,7 @@ impl UserInterface {
         let view = binding.lock().unwrap();
         let navigate_to = view.get_navigate_to();
 
-
-
         // TODO these views being singleton might be a problem
-
         if *navigate_to == NavigateTo::RoomsView {
             let rooms_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomsView::new(user_id)));
             //drop(view); // Explicitly unlocks the MutexGuard here

@@ -257,23 +257,24 @@ impl Manager {
     }
 
 
-    pub fn get_message_from_room(room_id: i32) -> Vec<(String, String, String)> {
+    pub fn get_message_from_room(room_id: i32) -> Vec<(i32, String, String, String)> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_MESSAGES_FOR_ROOM).unwrap();
         let mut rows = stmt.query([&room_id]).unwrap();
 
         // Create an empty HashMap to store the results
-        let mut users: Vec<(String, String, String)> = Vec::new();
+        let mut messages: Vec<(i32, String, String, String)> = Vec::new();
         while let Some(row) = rows.next().unwrap() {
 
+            let user_id: i32 = row.get("user_id").unwrap();
             let name: String = row.get("username").unwrap();
             let message: String = row.get("message").unwrap();
             let created_date: String = row.get("created_date").unwrap();
 
             // Insert the result into the HashMap, here id is the key and name is the value
-            users.push((created_date, name, message));
+            messages.push((user_id, created_date, name, message));
         }
-        users
+        messages
     }
 
     pub fn post_message(room_id: i32, message: String, user_id: i32) {

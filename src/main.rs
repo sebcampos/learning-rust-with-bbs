@@ -8,6 +8,7 @@ use std::io::{Write, Read};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 use crate::input_interface::UserInterface;
 use crate::input_interface::Events;
 use crossbeam_channel::{unbounded, Sender, Receiver};
@@ -50,7 +51,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
     stream_clone.lock().unwrap().write_all(&disable_line_mode).unwrap();
     stream_clone.lock().unwrap().flush().unwrap();
 
-    let thread_1_stream = Arc::clone(&stream_clone);
+    let stream_clone_2 = Arc::clone(&stream_clone);
 
     let mut buffer: Vec<u8> = vec![0; 30];
 
@@ -61,7 +62,10 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         loop {
             match rx.recv() {
                 Ok(msg) => {
-                    handle_broadcast_event(msg, &user_interface_clone, &thread_1_stream);
+                    let res = handle_broadcast_event(msg, &user_interface_clone, &stream_clone_2);
+                    if res == -1 {
+                        break;
+                    }
                 }
                 Err(_) => {
                     println!("receiver closed.");
@@ -79,12 +83,19 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
 
 
     loop {
-        let n = stream_clone.lock().unwrap().read(&mut buffer).unwrap();
-
-        if n == 0 {
-            break; // Client disconnected
-        }
-
+        match stream_clone.lock().unwrap().read(&mut buffer) {
+            Ok(0) => {
+                // The client has gracefully disconnected
+                println!("Client disconnected (EOF).");
+                break; // Break the loop to close the connection
+            }
+            Ok(n) => n, // Data was read successfully
+            Err(e) => {
+                // Handle the error, e.g., connection lost
+                eprintln!("Error reading from stream: {}", e);
+                0 // Exit on error (client may have closed the connection)
+            }
+        };
         let mut ui = user_interface.lock().unwrap();
 
         let user_event = UserInterface::get_user_event(&buffer);
@@ -106,8 +117,10 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
             let mut view = binding.lock().unwrap();
             view_handle_event = view.handle_event(user_event, &mut *stream_clone.lock().unwrap(), None);
         }
+
         if view_handle_event == Events::Exit {
             stream_clone.lock().unwrap().write_all("\x1b[1;32mGoodbye!\x1b[0m\r\n\r\n".to_string().as_bytes()).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
             break;
         } else if view_handle_event == Events::NavigateView {
             let navigate_arg: Option<i32>;
@@ -126,6 +139,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
                 255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)
             ];
             stream_clone.lock().unwrap().write_all(&disable_line_mode).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
             ui.set_input_mode(false)
         } else if view_handle_event == Events::InputModeEnable {
             let enable_line_mode = [
@@ -133,6 +147,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
                 255, 252, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Enable line buffering)
             ];
             stream_clone.lock().unwrap().write_all(&enable_line_mode).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
             ui.set_input_mode(true)
         } else if view_handle_event == Events::SecretInputModeEnable {
             let enable_secret_mode = [
@@ -140,6 +155,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
                 255, 252, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Enable line buffering)
             ];
             stream_clone.lock().unwrap().write_all(&enable_secret_mode).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
             ui.set_input_mode(true)
         } else if view_handle_event == Events::Authenticate {
             ui.set_user_id();
@@ -149,6 +165,8 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
                 255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)
             ];
             stream_clone.lock().unwrap().write_all(&disable_line_mode).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
+            ui.set_input_mode(false);
             let tx_list_locked = tx_list.lock().unwrap();
             for tx in tx_list_locked.iter() {
                 //broadcast_events::
@@ -171,7 +189,14 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
                 let _ = tx.send(format!("{{\"event_type\": \"room_join\", \"user_id\": {}}}", user_id));
             }
             ui.navigate_view(None);
+            ui.set_input_mode(true);
         } else if view_handle_event == Events::RoomLeave {
+            let disable_line_mode = [
+                255, 251, 1,  // IAC WILL ECHO (Disable local echo)
+                255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)
+            ];
+            stream_clone.lock().unwrap().write_all(&disable_line_mode).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
             let user_id = ui.get_user_id();
             let room_id = ui.get_current_room_id();
             Manager::subtract_from_room_online(room_id);
@@ -182,12 +207,20 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
             ui.set_current_room_id(-1);
             ui.navigate_view(None);
         } else if view_handle_event == Events::RoomMessageSent {
+            let enable_line_mode = [
+                255, 252, 1,  // IAC WILL ECHO (Enable local echo)
+                255, 252, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Enable line buffering)
+            ];
+            stream_clone.lock().unwrap().write_all(&enable_line_mode).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
             let user_id = ui.get_user_id();
             let room_id = ui.get_current_room_id();
             let tx_list_locked = tx_list.lock().unwrap();
             for tx in tx_list_locked.iter() {
                 let _ = tx.send(format!("{{\"event_type\": \"room_message\", \"room_id\": {}}}", room_id));
             }
+            stream_clone.lock().unwrap().write_all(&disable_line_mode).unwrap();
+            stream_clone.lock().unwrap().flush().expect("TODO: panic message");
         }
 
         let updated_view = ui.get_current_view().lock().unwrap().render();
@@ -225,6 +258,7 @@ fn main() {
     for stream in listener.incoming() {
         println!("Listener incoming");
         if let Ok(stream) = stream {
+            stream.set_read_timeout(Some(Duration::new(20, 0))).expect("TODO: panic message");
             let shared_stream = Arc::new(Mutex::new(stream));
             let thread_1_stream = Arc::clone(&shared_stream);
             let rx_clone = {

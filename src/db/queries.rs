@@ -1,4 +1,3 @@
-// might need to make this public
 pub(crate) const CREATE_USERS: &str = "CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     logged_in INTEGER NOT NULL DEFAULT 0,
@@ -37,7 +36,7 @@ pub(crate) const CREATE_DIRECT_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS dire
 )";
 
 
-pub(crate) const GET_ROOMS: &str = "SELECT * FROM rooms ORDER BY online LIMIT 20";
+pub(crate) const GET_ROOMS: &str = "SELECT * FROM rooms ORDER BY online DESC LIMIT 20";
 
 pub(crate) const GET_ROOM_NAME: &str = "SELECT name FROM rooms WHERE id = ? LIMIT 1";
 
@@ -67,6 +66,6 @@ pub(crate) const GET_USER: &str = "SELECT * FROM users WHERE id = ?";
 
 pub(crate) const GET_USER_BY_NAME: &str = "SELECT id FROM users WHERE username = ?";
 
-pub(crate) const GET_MESSAGES_FOR_ROOM: &str = "SELECT m.created_date, u.username, m.message FROM messages AS m  LEFT JOIN users AS u ON m.user_id = u.id WHERE m.room_id = ?";
+pub(crate) const GET_MESSAGES_FOR_ROOM: &str = "SELECT m.user_id, m.created_date, u.username, m.message FROM messages AS m  LEFT JOIN users AS u ON m.user_id = u.id WHERE m.room_id = ? ORDER BY m.created_date DESC LIMIT 20";
 
 pub(crate) const POST_MESSAGE_TO_ROOM: &str = "INSERT INTO messages (message, user_id, room_id) VALUES (?, ?, ?)";
