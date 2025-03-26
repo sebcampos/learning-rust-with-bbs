@@ -4,6 +4,7 @@ use crate::views::room_view::RoomView;
 use crate::views::base_view::View;
 use std::str;
 use std::sync::{Arc, Mutex};
+use crate::db::manage::Manager;
 use crate::views::base_view::NavigateTo;
 use crate::views::menu_view::BBSMenu;
 use crate::views::users_view::UsersView;
@@ -32,7 +33,8 @@ pub enum Events {
     Unknown,
     RoomJoin,
     RoomLeave,
-    MessageSent,
+    DirectMessageSent,
+    RoomMessageSent,
     UserView
 }
 
@@ -150,6 +152,7 @@ impl UserInterface {
         let navigate_to = view.get_navigate_to();
 
 
+
         // TODO these views being singleton might be a problem
 
         if *navigate_to == NavigateTo::RoomsView {
@@ -184,8 +187,10 @@ impl UserInterface {
         }
 
         else if *navigate_to == NavigateTo::RoomView {
-            let user_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomView::new(view_user_id)));
-            self.current_view = user_view;
+            let room_id = self.get_current_room_id();
+            let room_name = Manager::get_room_name_by_id(room_id);
+            let room_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomView::new(room_id, room_name, user_id)));
+            self.current_view = room_view;
         }
     }
 

@@ -74,6 +74,20 @@ impl Manager {
         }
     }
 
+    pub fn get_room_name_by_id(room_id: i32) -> String {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::GET_ROOM_NAME).unwrap();
+
+        // Execute the query and collect the rows into a HashMap
+        let mut rows = stmt.query([&room_id]).unwrap();
+        let mut room_name: String = "".to_string();
+        while let Some(row) = rows.next().unwrap() {
+            room_name = row.get("name").unwrap();
+        }
+        room_name
+
+    }
+
     pub fn get_rooms() -> HashMap<String, u32> {
         // Run the query to get the rows
         let conn = get_db_connection().lock().unwrap();
@@ -192,7 +206,7 @@ impl Manager {
         users
     }
 
-    pub fn get_room_id_by_name(room_name: &str) -> i32{
+    pub fn get_room_id_by_name(room_name: String) -> i32{
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_ROOM_BY_NAME).unwrap();
         let mut rows = stmt.query([&room_name]).unwrap();
@@ -260,6 +274,12 @@ impl Manager {
             users.push((created_date, name, message));
         }
         users
+    }
+
+    pub fn post_message(room_id: i32, message: String, user_id: i32) {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::POST_MESSAGE_TO_ROOM).unwrap();
+        stmt.execute([&message, &user_id.to_string(), &room_id.to_string()]).expect("Failed to post to room");
     }
 
 }

@@ -26,6 +26,8 @@ pub trait View: Send {
 
     fn get_user_id(&self) -> i32;
 
+    fn refresh_data(&mut self) {}
+
     fn handle_selection(&mut self, stream: &mut TcpStream) -> Events;
 
     fn handle_event(&mut self,  event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {

@@ -128,6 +128,7 @@ impl View for RoomsView {
     }
 
     fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
+        self.navigate_to = NavigateTo::RoomView;
         Events::RoomJoin
     }
 
