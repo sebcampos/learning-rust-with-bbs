@@ -87,7 +87,7 @@ impl RoomsView {
         }
     }
 
-    pub fn get_selection(&mut self) -> &str {
+    pub fn get_selection(&self) -> &str {
         &self.display_rooms[self.selected_index].0
     }
 

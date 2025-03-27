@@ -35,7 +35,7 @@ impl RoomView {
 
     fn move_down(&mut self) {}
 
-    fn get_selection(&mut self) -> &str {
+    pub  fn get_selection(&mut self) -> &str {
         todo!()
     }
 

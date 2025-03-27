@@ -103,11 +103,11 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         }
     });
 
-    // let tx_clone = {
-    //     let (client_tx, client_rx) = unbounded(); // Create a new sender for this client
-    //     tx_list.lock().unwrap().push(client_tx); // Store in shared list
-    //     client_rx
-    // };
+    let tx_clone = {
+        let (client_tx, client_rx) = unbounded(); // Create a new sender for this client
+        tx_list.lock().unwrap().push(client_tx); // Store in shared list
+        client_rx
+    };
 
     let mut buffer: Vec<u8> = vec![0; 30];
     loop {
@@ -265,7 +265,7 @@ fn main() {
         if let Ok(stream) = stream {
 
             // TODO change time out to 1 second
-            stream.set_read_timeout(Some(Duration::new(20, 0))).expect("TODO: panic message");
+            stream.set_read_timeout(Some(Duration::new(1, 0))).expect("TODO: panic message");
 
 
             // create a Mutex shared stream so it can be shared between 2 threads

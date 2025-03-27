@@ -8,8 +8,8 @@ use crate::views::base_view::NavigateTo::NoneView;
 
 pub struct LoginRegisterView {
     input_mode: bool,
-    username: &'static str,
-    password: &'static str,
+    username: String,
+    password: String,
     error: bool,
     error_message: &'static str,
     collecting_username: bool,
@@ -27,8 +27,8 @@ impl LoginRegisterView {
     pub fn new() -> LoginRegisterView {
         Self {
             input_mode: false,
-            username: "",
-            password: "",
+            username: "".to_string(),
+            password: "".to_string(),
             user_id: -1,
             error: false,
             error_message: "",
@@ -51,11 +51,11 @@ impl LoginRegisterView {
         let mut error_msg: &str = "";
         let user_id: i32;
         if self.is_login {
-            user_id = Manager::validate_user(self.username, self.password);
+            user_id = Manager::validate_user(self.username.as_str(), self.password.as_str());
             error_msg = "Unable to validate user, maybe wrong password?";
         }
         else if self.is_create {
-            user_id =  Manager::create_user(self.username, self.password);
+            user_id =  Manager::create_user(self.username.as_str(), self.password.as_str());
             error_msg = "Unable to create user, maybe username already taken";
         }
         else {
@@ -110,8 +110,8 @@ impl LoginRegisterView {
     fn reset_view_state(&mut self) {
         self.error = false;
         self.input_mode = false;
-        self.username = "";
-        self.password = "";
+        self.username = "".to_string();
+        self.password = "".to_string();
         self.is_login = false;
         self.is_create = false;
         self.user_id = -1;
@@ -145,7 +145,7 @@ impl View for LoginRegisterView {
         // input prompts if in input mode
         if self.collecting_username && !self.error {
             let mut username_prompt = "\x1b[1;32m> Username: ".to_string();
-            username_prompt.push_str(self.username);
+            username_prompt.push_str(self.username.as_str());
             output.push_str(username_prompt.as_str());
         }
         else if self.collecting_password && !self.error {
@@ -186,14 +186,14 @@ impl View for LoginRegisterView {
 
         // override username with current buffer string if collecting username
         else if self.input_mode && self.collecting_username {
-            self.username = buffer_string.as_str().clone();
+            self.username = buffer_string;
             self.collecting_username = false;
             self.collecting_password = true;
         }
 
         // override password with current buffer string if collecting password
         else if self.input_mode && self.collecting_password {
-            let password = buffer_string.as_str();
+            let password = buffer_string;
             self.password = password.clone();
             self.collecting_password = false;
             self.validate_credentials();

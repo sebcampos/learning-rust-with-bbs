@@ -128,17 +128,22 @@ impl UserInterface {
 
 
     pub fn join_room(&mut self) -> i32{
-        let mut rooms_views = self.get_current_view().lock().unwrap()
+        let binding = self.get_current_view();
+        let binding = binding.lock().unwrap();
+        let rooms_view = binding
             .as_any()
             .downcast_ref::<RoomsView>().unwrap();
-        let room_id = Manager::get_room_id_by_name(rooms_views.get_selection().to_string());
+        let room_name = rooms_view.get_selection();
+        let room_id = Manager::get_room_id_by_name(room_name.to_string());
         Manager::add_to_room_online(room_id);
         self.current_room = room_id;
         room_id
     }
 
     pub fn set_user_id(&mut self) {
-        let login_view = self.get_current_view().lock().unwrap()
+        let binding = self.get_current_view();
+        let binding = binding.lock().unwrap();
+        let login_view = binding
             .as_any()
             .downcast_ref::<LoginRegisterView>().unwrap();
         let user_id = login_view.get_user_id();
