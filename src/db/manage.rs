@@ -1,14 +1,11 @@
 use std::collections::HashMap;
-use crate::db::connection::get_db_connection;
-use crate::db::queries;
 use bcrypt::{hash, DEFAULT_COST};
 use bcrypt::{verify};
+use crate::db::connection::get_db_connection;
+use crate::db::queries;
+
 
 pub struct Manager;
-
-pub struct User {
-
-}
 
 
 impl Manager {
@@ -38,8 +35,9 @@ impl Manager {
         stmt.execute([&user_id]).expect("Failed to logout user");
     }
 
-    pub fn create_user(username: &String, password: &String) -> i32 {
-        let password_hash = hash(password, DEFAULT_COST).expect("Failed to hash password");
+    pub fn create_user(username: &str, password: &str) -> i32 {
+        let binding = hash(password, DEFAULT_COST).expect("Failed to hash password");
+        let password_hash = binding.as_str();
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::CREATE_NEW_USER).unwrap();
         match stmt.execute([&username, &password_hash]) {
@@ -59,7 +57,7 @@ impl Manager {
         }
     }
 
-    pub fn validate_user(username: &String, password: &String) -> i32 {
+    pub fn validate_user(username: &str, password: &str) -> i32 {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::SEARCH_USER).unwrap();
         let mut rows = stmt.query([&username]).unwrap();
@@ -89,7 +87,9 @@ impl Manager {
     }
 
     pub fn get_rooms() -> HashMap<String, u32> {
-        // Run the query to get the rows
+        /**
+        * Collects the room names and their online count as a hashmap
+        */
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_ROOMS).unwrap();
 

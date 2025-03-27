@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::net::TcpStream;
 use crate::views::base_view::{NavigateTo, View};
 use crate::input_interface::Events;
@@ -19,30 +20,6 @@ impl BBSMenu {
             user_id,
             navigate_to: NavigateTo::NoneView
         }
-    }
-
-}
-
-// Implement the `Menu` trait for `BBSMenu`
-impl View for BBSMenu {
-    fn get_navigate_to(&self) -> &NavigateTo {
-        &self.navigate_to
-    }
-
-    fn render(&self) -> String {
-        let mut output = String::from("\x1b[2J\x1b[H"); // Clear screen + move cursor to top
-        output.push_str("\x1b[1;32mWelcome to Rust BBS!\x1b[0m\r\n\r\n");
-
-        for (idx, option) in self.options.iter().enumerate() {
-            if idx == self.selected_index {
-                output.push_str(&format!("\x1b[1;33m> {} \x1b[0m\r\n", option)); // Highlighted selection
-            } else {
-                output.push_str(&format!("  {}\r\n", option));
-            }
-        }
-
-        output.push_str("\nUse ↑ (Arrow Up) / ↓ (Arrow Down) and Enter to select.\r\n");
-        output
     }
 
     fn move_up(&mut self) {
@@ -88,4 +65,39 @@ impl View for BBSMenu {
         result_event
     }
 
+}
+
+// Implement the `Menu` trait for `BBSMenu`
+impl View for BBSMenu {
+    fn as_any(&self) -> &(dyn Any) {
+        self
+    }
+
+    fn get_navigate_to(&self) -> &NavigateTo {
+        &self.navigate_to
+    }
+
+    fn render(&self) -> String {
+        let mut output = String::from("\x1b[2J\x1b[H"); // Clear screen + move cursor to top
+        output.push_str("\x1b[1;32mWelcome to Rust BBS!\x1b[0m\r\n\r\n");
+
+        for (idx, option) in self.options.iter().enumerate() {
+            if idx == self.selected_index {
+                output.push_str(&format!("\x1b[1;33m> {} \x1b[0m\r\n", option)); // Highlighted selection
+            } else {
+                output.push_str(&format!("  {}\r\n", option));
+            }
+        }
+
+        output.push_str("\nUse ↑ (Arrow Up) / ↓ (Arrow Down) and Enter to select.\r\n");
+        output
+    }
+
+    fn refresh_data(&mut self) {
+        todo!()
+    }
+
+    fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
+        todo!()
+    }
 }

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::net::TcpStream;
 use crate::views::base_view::{NavigateTo, View};
 use crate::input_interface::Events;
@@ -72,9 +73,43 @@ impl RoomsView {
         self.display_rooms = sorted_vec;
     }
 
+
+    fn move_up(&mut self) {
+        if self.selected_index > 0 {
+            self.selected_index -= 1;
+        }
+    }
+
+    fn move_down(&mut self) {
+        let display_size: usize = self.display_rooms.len();
+        if display_size > 0 && self.selected_index < display_size - 1 {
+            self.selected_index += 1;
+        }
+    }
+
+    pub fn get_selection(&mut self) -> &str {
+        &self.display_rooms[self.selected_index].0
+    }
+
+    fn get_user_id(&self) -> i32 {
+        self.user_id
+    }
+
+    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
+        self.navigate_to = NavigateTo::RoomView;
+        Events::RoomJoin
+    }
+
+
 }
 
 impl View for RoomsView {
+
+
+
+    fn as_any(&self) -> &(dyn Any) {
+        self
+    }
 
     fn get_navigate_to(&self) -> &NavigateTo {
         &self.navigate_to
@@ -106,34 +141,9 @@ impl View for RoomsView {
         output
     }
 
-    fn move_up(&mut self) {
-        if self.selected_index > 0 {
-            self.selected_index -= 1;
-        }
-    }
-
-    fn move_down(&mut self) {
-        let display_size: usize = self.display_rooms.len();
-        if display_size > 0 && self.selected_index < display_size - 1 {
-            self.selected_index += 1;
-        }
-    }
-
-    fn get_selection(&mut self) -> &str {
-        &self.display_rooms[self.selected_index].0
-    }
-
-    fn get_user_id(&self) -> i32 {
-        self.user_id
-    }
-
-    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
-        self.navigate_to = NavigateTo::RoomView;
-        Events::RoomJoin
-    }
 
 
-    fn handle_event(&mut self, event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {
+    fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
         let result_event: Events;
 
         if event == Events::UpArrow {
@@ -144,9 +154,9 @@ impl View for RoomsView {
             result_event = event;
             self.move_down();
         }
-        else if event == Events::Enter {
-            result_event = self.handle_selection(stream);
-        }
+        // else if event == Events::Enter {
+        //     result_event = self.handle_selection(stream);
+        // }
         else if event == Events::KeyH && !(self.creating_room  || self.searching_room)
         {
             self.navigate_to = NavigateTo::RoomView;
@@ -161,27 +171,27 @@ impl View for RoomsView {
         {
             self.set_context_state("searching_room");
             result_event = Events::InputModeEnable;
-        }
+        //}
 
-        else if self.creating_room  || self.searching_room {
-            let buffer_str = buffer_string.unwrap();
-            if buffer_str.trim() == "q" {
-                self.set_context_state("selecting_room");
-                result_event = Events::InputModeDisable;
-            } else if self.creating_room && buffer_str.trim() != "" {
-                Manager::create_room(buffer_str, self.user_id.to_string());
-                let room_query = Manager::get_rooms();
-                self.refresh_rooms(room_query);
-                self.set_context_state("selecting_room");
-                result_event =  Events::InputModeDisable;;
-            } else if self.searching_room && buffer_str.trim() != "" {
-                let room_query = Manager::search_rooms(buffer_str);
-                self.refresh_rooms(room_query);
-                self.set_context_state("selecting_room");
-                result_event =  Events::InputModeDisable;;
-            } else {
-                result_event = event;
-            }
+        // else if self.creating_room  || self.searching_room {
+        //     let buffer_str = buffer_string.unwrap();
+        //     if buffer_str.trim() == "q" {
+        //         self.set_context_state("selecting_room");
+        //         result_event = Events::InputModeDisable;
+        //     } else if self.creating_room && buffer_str.trim() != "" {
+        //         Manager::create_room(buffer_str, self.user_id.to_string());
+        //         let room_query = Manager::get_rooms();
+        //         self.refresh_rooms(room_query);
+        //         self.set_context_state("selecting_room");
+        //         result_event =  Events::InputModeDisable;;
+        //     } else if self.searching_room && buffer_str.trim() != "" {
+        //         let room_query = Manager::search_rooms(buffer_str);
+        //         self.refresh_rooms(room_query);
+        //         self.set_context_state("selecting_room");
+        //         result_event =  Events::InputModeDisable;;
+        //     } else {
+        //         result_event = event;
+        //     }
         } else {
             result_event = event;
         }

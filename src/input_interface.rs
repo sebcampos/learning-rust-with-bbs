@@ -3,7 +3,7 @@ use crate::views::rooms_view::RoomsView;
 use crate::views::room_view::RoomView;
 use crate::views::base_view::View;
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use crate::db::manage::Manager;
 use crate::views::base_view::NavigateTo;
 use crate::views::menu_view::BBSMenu;
@@ -126,9 +126,22 @@ impl UserInterface {
         self.current_room
     }
 
+
+    pub fn join_room(&mut self) -> i32{
+        let mut rooms_views = self.get_current_view().lock().unwrap()
+            .as_any()
+            .downcast_ref::<RoomsView>().unwrap();
+        let room_id = Manager::get_room_id_by_name(rooms_views.get_selection().to_string());
+        Manager::add_to_room_online(room_id);
+        self.current_room = room_id;
+        room_id
+    }
+
     pub fn set_user_id(&mut self) {
-        let login_view = self.get_current_view();
-        let user_id = login_view.lock().unwrap().get_user_id();
+        let login_view = self.get_current_view().lock().unwrap()
+            .as_any()
+            .downcast_ref::<LoginRegisterView>().unwrap();
+        let user_id = login_view.get_user_id();
         self.user_id = user_id;
     }
 
@@ -178,12 +191,11 @@ impl UserInterface {
         buffer_string.trim().to_string()
     }
 
-    pub fn navigate_view(&mut self, view_user_id: Option<i32>) {
-        let user_id = self.get_user_id();
-        let view_user_id = view_user_id.unwrap_or(-1);
+    pub fn navigate_view(&mut self) {
         let binding = self.get_current_view();
         let view = binding.lock().unwrap();
         let navigate_to = view.get_navigate_to();
+        let user_id = self.get_user_id();
 
         // TODO these views being singleton might be a problem
         if *navigate_to == NavigateTo::RoomsView {
@@ -207,12 +219,12 @@ impl UserInterface {
 
         else if *navigate_to == NavigateTo::MeView {
             let myself_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UserView::new(user_id, true)));
-            //drop(view); // Explicitly unlocks the MutexGuard here
-
             self.current_view =  myself_view;
         }
 
         else if *navigate_to == NavigateTo::UserView {
+            let user_view = view.as_any().downcast_ref::<UsersView>().unwrap();
+            let view_user_id = Manager::get_user_id_by_name(user_view.get_selection());
             let user_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UserView::new(view_user_id, false)));
             self.current_view = user_view;
         }

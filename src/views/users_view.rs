@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::net::TcpStream;
 use crate::views::base_view::{NavigateTo, View};
@@ -50,9 +51,38 @@ impl UsersView {
         self.display_users = vec;
     }
 
+    fn move_up(&mut self) {
+        if self.selected_index > 0 {
+            self.selected_index -= 1;
+        }
+    }
+
+
+    fn move_down(&mut self) {
+        let display_size: usize = self.display_users.len();
+        if display_size > 0 && self.selected_index < display_size - 1 {
+            self.selected_index += 1;
+        }
+    }
+
+    pub fn get_selection(&self) -> &str {
+        &self.display_users[self.selected_index].0
+    }
+
+    fn get_user_id(&self) -> i32 {
+        self.user_id
+    }
+
+
 }
 
 impl View for UsersView {
+
+
+    fn as_any(&self) -> &(dyn Any) {
+        self
+    }
+
     fn get_navigate_to(&self) -> &NavigateTo {
         &self.navigate_to
     }
@@ -86,47 +116,20 @@ impl View for UsersView {
         output
     }
 
-    fn move_up(&mut self) {
-        if self.selected_index > 0 {
-            self.selected_index -= 1;
-        }
-    }
 
 
-    fn move_down(&mut self) {
-        let display_size: usize = self.display_users.len();
-        if display_size > 0 && self.selected_index < display_size - 1 {
-            self.selected_index += 1;
-        }
-    }
-
-    fn get_selection(&mut self) -> &str {
-        &self.display_users[self.selected_index].0
-    }
-
-    fn get_user_id(&self) -> i32 {
-        self.user_id
-    }
-
-
-    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
-        self.navigate_to = NavigateTo::UserView;
-        Events::NavigateView
-    }
-
-    fn handle_event(&mut self, event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {
-        let result_event: Events;
+    fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
+        let mut result_event: Events = Events::Unknown;
 
         if event == Events::UpArrow {
-            result_event = event;
             self.move_up();
         }
         else if event == Events::DownArrow {
-            result_event = event;
             self.move_down();
         }
         else if event == Events::Enter {
-            result_event = self.handle_selection(stream);
+            self.navigate_to = NavigateTo::UserView;
+            result_event = Events::NavigateView;
         }
         else if event == Events::KeyH && !self.searching_user
         {
@@ -140,7 +143,7 @@ impl View for UsersView {
         }
 
         else if self.searching_user {
-            let buffer_str = buffer_string.unwrap();
+            let buffer_str = buffer_string;
             if buffer_str.trim() == "q" {
                 self.searching_user = false;
                 result_event = Events::InputModeDisable;
@@ -148,14 +151,16 @@ impl View for UsersView {
                 let user_query = Manager::search_users(buffer_str);
                 self.refresh_users(Some(user_query));
                 self.searching_user = false;
-                result_event =  Events::InputModeDisable;;
-            } else {
-                result_event = event;
+                result_event = Events::InputModeDisable;;
             }
-        } else {
-            result_event = event;
         }
-        result_event
+
+        if result_event != Events::Unknown {
+            result_event
+        }
+        else {
+            event
+        }
     }
 
 }

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 use std::net::TcpStream;
 use crate::db::manage::Manager;
@@ -21,9 +22,31 @@ impl UserView {
             user_data
         }
     }
+
+    fn move_up(&mut self) {}
+
+    fn move_down(&mut self) {}
+
+    fn get_selection(&mut self) -> &str {
+        todo!()
+    }
+
+    fn get_user_id(&self) -> i32 {
+        todo!()
+    }
+
+    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
+        todo!()
+    }
 }
 
 impl View for UserView {
+
+
+    fn as_any(&self) -> &(dyn Any) {
+        self
+    }
+
     fn get_navigate_to(&self) -> &NavigateTo {
         &self.navigate_to
     }
@@ -61,23 +84,8 @@ impl View for UserView {
         output
     }
 
-    fn move_up(&mut self) {}
 
-    fn move_down(&mut self) {}
-
-    fn get_selection(&mut self) -> &str {
-        todo!()
-    }
-
-    fn get_user_id(&self) -> i32 {
-        todo!()
-    }
-
-    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
-        todo!()
-    }
-
-    fn handle_event(&mut self, event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {
+    fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
         let result_event: Events;
 
         if event == Events::KeyS {

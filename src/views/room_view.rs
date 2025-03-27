@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::net::TcpStream;
 use crate::db::manage::Manager;
 use crate::input_interface::Events;
@@ -29,32 +30,6 @@ impl RoomView {
         }
     }
 
-
-}
-
-impl View for RoomView {
-    fn get_navigate_to(&self) -> &NavigateTo {
-        &self.navigate_to
-    }
-
-    fn render(&self) -> String {
-        let mut output = String::from("\x1b[2J\x1b[H");
-        output.push_str(&format!("\x1b[1;32m{}\x1b[0m\r\n\r\n", self.room_name));
-
-
-        // Append sorted rooms to output
-        for (user_id, created_date, user, message) in self.messages.iter() {
-            if *user_id == self.user_id {
-                output.push_str(&format!("\x1b[1;32m[{}]\x1b[0m \x1b[38;5;214m{}\x1b[0m  {}\r\n", created_date, user, message));
-            }
-            else {
-                output.push_str(&format!("\x1b[1;32m[{}]\x1b[0m \x1b[1;35m{}\x1b[0m  {}\r\n", created_date, user, message));
-            }
-        }
-        output.push_str("\n");
-        output
-    }
-
     fn move_up(&mut self) {}
 
 
@@ -77,7 +52,38 @@ impl View for RoomView {
         todo!()
     }
 
-    fn handle_event(&mut self, event: Events, stream: &mut TcpStream, buffer_string: Option<String>) -> Events {
+
+}
+
+impl View for RoomView {
+
+    fn as_any(&self) -> &(dyn Any) {
+        self
+    }
+    fn get_navigate_to(&self) -> &NavigateTo {
+        &self.navigate_to
+    }
+
+    fn render(&self) -> String {
+        let mut output = String::from("\x1b[2J\x1b[H");
+        output.push_str(&format!("\x1b[1;32m{}\x1b[0m\r\n\r\n", self.room_name));
+
+
+        // Append sorted rooms to output
+        for (user_id, created_date, user, message) in self.messages.iter() {
+            if *user_id == self.user_id {
+                output.push_str(&format!("\x1b[1;32m[{}]\x1b[0m \x1b[38;5;214m{}\x1b[0m  {}\r\n", created_date, user, message));
+            }
+            else {
+                output.push_str(&format!("\x1b[1;32m[{}]\x1b[0m \x1b[1;35m{}\x1b[0m  {}\r\n", created_date, user, message));
+            }
+        }
+        output.push_str("\n");
+        output
+    }
+
+
+    fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
         let result_event: Events;
         // TODO handle delete
         // if event == Events::KeyR && !self.sending_message {
@@ -97,7 +103,7 @@ impl View for RoomView {
                 result_event = Events::Unknown;
             }
         } else if event != Events::Enter {
-            let buffer_str = buffer_string.unwrap();
+            let buffer_str = buffer_string;
             if buffer_str.trim() != "" {
                 self.message.push_str(buffer_str.as_str());
             }
