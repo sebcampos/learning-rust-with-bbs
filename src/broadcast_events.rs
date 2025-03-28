@@ -52,9 +52,10 @@ pub fn handle_broadcast_event(raw_event: String, mut ui: &Arc<Mutex<UserInterfac
 
     let json: Value = serde_json::from_str(&*raw_event).unwrap_or(Value::Null);
     if json.is_null() {
-        return -1;
+        return 0;
     }
     let mut interface = ui.lock().unwrap();
+
     if json["event_type"] == "room_message" {
         let mut stream = s_ref.lock().unwrap();
         if json["room_id"] == interface.get_current_room_id() {
@@ -68,6 +69,10 @@ pub fn handle_broadcast_event(raw_event: String, mut ui: &Arc<Mutex<UserInterfac
 
         }
     }
+    else if json["event_type"] == "logout" && json["user_id"] == interface.get_user_id() {
+        return -1;
+    }
+
     0
 
 

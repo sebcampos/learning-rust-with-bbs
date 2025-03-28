@@ -5,9 +5,11 @@ use crate::input_interface::Events;
 use crate::db::manage::Manager;
 use std::collections::HashMap;
 use std::str;
-
+use crate::input_interface::Events::Unknown;
 
 pub struct RoomsView {
+    input_mode: bool,
+    input: String,
     rooms: HashMap<String, u32>,
     display_rooms: Vec<(String, u32)>,
     user_id: i32,
@@ -20,10 +22,12 @@ pub struct RoomsView {
 
 impl RoomsView {
     pub fn new(user_id: i32) -> Self {
-        let rooms = Manager::get_rooms();
+        let rooms = Manager::get_rooms(0);
         let room_names_and_count = rooms.iter().map(|(key, &value)| (key.clone(), value)) // Clone the key and copy the value
             .collect();
         Self {
+            input_mode: false,
+            input: String::new(),
             rooms,
             display_rooms: room_names_and_count,
             selected_index: 0,
@@ -91,11 +95,8 @@ impl RoomsView {
         &self.display_rooms[self.selected_index].0
     }
 
-    fn get_user_id(&self) -> i32 {
-        self.user_id
-    }
 
-    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
+    fn handle_selection(&mut self) -> Events {
         self.navigate_to = NavigateTo::RoomView;
         Events::RoomJoin
     }
@@ -104,7 +105,6 @@ impl RoomsView {
 }
 
 impl View for RoomsView {
-
 
 
     fn as_any(&self) -> &(dyn Any) {
@@ -121,10 +121,13 @@ impl View for RoomsView {
 
 
         if self.searching_room {
-            output.push_str("\x1b[1;33m> Search (\"q\" to quit): ");
+            output.push_str("\x1b[1;33m> Search (CNTRL+Q): ");
+            output.push_str(self.input.as_str());
+
         }
         else if self.creating_room {
-            output.push_str("\x1b[1;32m> Create Room (\"q\" to quit): ");
+            output.push_str("\x1b[1;32m> Create Room (CNTRL+Q): ");
+            output.push_str(self.input.as_str());
         }
         else if self.selecting_room {
             // Append sorted rooms to output
@@ -144,55 +147,62 @@ impl View for RoomsView {
 
 
     fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
-        let result_event: Events;
+        let mut result_event: Events = Unknown;
 
-        if event == Events::UpArrow {
-            result_event = event;
+        if event == Events::UpArrow && !self.input_mode{
             self.move_up();
         }
-        else if event == Events::DownArrow {
-            result_event = event;
+
+        else if event == Events::DownArrow && !self.input_mode{
             self.move_down();
         }
-        // else if event == Events::Enter {
-        //     result_event = self.handle_selection(stream);
-        // }
-        else if event == Events::KeyH && !(self.creating_room  || self.searching_room)
-        {
+
+        else if event == Events::Enter && !self.input_mode {
             self.navigate_to = NavigateTo::RoomView;
+            result_event = Events::RoomJoin;
+        }
+
+        else if event == Events::KeyH && !(self.creating_room  || self.searching_room) {
+            self.navigate_to = NavigateTo::MenuView;
             result_event = Events::NavigateView;
         }
-        else if event == Events::KeyC && !self.creating_room
-        {
+
+        else if event == Events::KeyC && !self.creating_room && !self.input_mode{
             self.set_context_state("creating_room");
+            self.input_mode = true;
             result_event = Events::InputModeEnable;
         }
-        else if event == Events::KeyS && !self.searching_room
-        {
-            self.set_context_state("searching_room");
-            result_event = Events::InputModeEnable;
-        //}
 
-        // else if self.creating_room  || self.searching_room {
-        //     let buffer_str = buffer_string.unwrap();
-        //     if buffer_str.trim() == "q" {
-        //         self.set_context_state("selecting_room");
-        //         result_event = Events::InputModeDisable;
-        //     } else if self.creating_room && buffer_str.trim() != "" {
-        //         Manager::create_room(buffer_str, self.user_id.to_string());
-        //         let room_query = Manager::get_rooms();
-        //         self.refresh_rooms(room_query);
-        //         self.set_context_state("selecting_room");
-        //         result_event =  Events::InputModeDisable;;
-        //     } else if self.searching_room && buffer_str.trim() != "" {
-        //         let room_query = Manager::search_rooms(buffer_str);
-        //         self.refresh_rooms(room_query);
-        //         self.set_context_state("selecting_room");
-        //         result_event =  Events::InputModeDisable;;
-        //     } else {
-        //         result_event = event;
-        //     }
-        } else {
+        else if event == Events::KeyS && !self.searching_room && !self.input_mode {
+            self.set_context_state("searching_room");
+            self.input_mode = true;
+            result_event = Events::InputModeEnable;
+        }
+
+
+        else if self.input_mode && event != Events::Enter {
+            self.input = buffer_string;
+        }
+
+        else if self.input_mode && event == Events::Enter && self.creating_room && self.input.trim() != ""{
+            Manager::create_room(self.input.to_string(), self.user_id.to_string());
+            let room_query = Manager::get_rooms(0);
+            self.refresh_rooms(room_query);
+            self.set_context_state("selecting_room");
+            self.input_mode = false;
+            self.input = "".to_string();
+            result_event =  Events::InputModeDisable;;
+        }
+
+        else if self.input_mode && event == Events::Enter && self.searching_room && self.input.trim() != "" {
+            let room_query = Manager::search_rooms(self.input.to_string(), 0);
+            self.refresh_rooms(room_query);
+            self.set_context_state("selecting_room");
+            self.input_mode = false;
+            self.input = "".to_string();
+            result_event =  Events::InputModeDisable;;
+        }
+        else {
             result_event = event;
         }
         result_event

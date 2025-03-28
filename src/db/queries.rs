@@ -44,7 +44,7 @@ pub const GET_ROOM_BY_NAME: &str = "SELECT id FROM rooms WHERE name = ? LIMIT 1"
 
 pub const SEARCH_ROOMS: &str = "SELECT * FROM rooms where name LIKE ? LIMIT 20 OFFSET ?";
 
-pub const SEARCH_USER: &str = "SELECT * FROM users WHERE username = ? OFFSET ?";
+pub const SEARCH_USER: &str = "SELECT * FROM users WHERE username = ?";
 
 pub const CREATE_NEW_ROOM: &str = "INSERT INTO rooms (name, owner_id) VALUES (?, ?)";
 

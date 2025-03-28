@@ -3,6 +3,7 @@ use std::net::TcpStream;
 use crate::views::base_view::{NavigateTo, View};
 use crate::input_interface::Events;
 use std::io::{Write};
+use crate::input_interface::Events::UpArrow;
 
 //#[derive(Clone)]
 pub struct BBSMenu {
@@ -41,33 +42,9 @@ impl BBSMenu {
     fn get_user_id(&self) -> i32 {
         self.user_id
     }
-
-
-    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
-        let selection = self.get_selection();
-        let result_event: Events;
-        if selection == "❌ Quit" {
-            result_event = Events::Exit;
-        } else if  selection == "🚪 Rooms" {
-            self.navigate_to = NavigateTo::RoomsView;
-            result_event = Events::NavigateView;
-        } else if  selection == "👥 People" {
-            self.navigate_to = NavigateTo::PeopleView;
-            result_event = Events::NavigateView;
-        } else if  selection == "👨‍💻 Me" {
-            self.navigate_to = NavigateTo::MeView;
-            result_event = Events::NavigateView;
-        } else {
-            stream.write_all(format!("\nYou selected: {}\n", selection).as_bytes())
-                .unwrap();
-            result_event = Events::NavigateView;
-        }
-        result_event
-    }
-
 }
 
-// Implement the `Menu` trait for `BBSMenu`
+
 impl View for BBSMenu {
     fn as_any(&self) -> &(dyn Any) {
         self
@@ -98,6 +75,32 @@ impl View for BBSMenu {
     }
 
     fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
-        todo!()
+        let result_event: Events;
+
+        if event == Events::UpArrow {
+            self.move_up();
+        }
+        else if event == Events::DownArrow {
+            self.move_down()
+        }
+        if event != Events::Enter {
+            return event;
+        }
+        let selection = self.get_selection();
+        if selection == "❌ Quit" {
+            result_event = Events::Exit;
+        } else if  selection == "🚪 Rooms" {
+            self.navigate_to = NavigateTo::RoomsView;
+            result_event = Events::NavigateView;
+        } else if  selection == "👥 People" {
+            self.navigate_to = NavigateTo::PeopleView;
+            result_event = Events::NavigateView;
+        } else if  selection == "👨‍💻 Me" {
+            self.navigate_to = NavigateTo::MeView;
+            result_event = Events::NavigateView;
+        } else {
+            result_event = Events::Unknown;
+        }
+        result_event
     }
 }

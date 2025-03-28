@@ -17,7 +17,7 @@ pub struct RoomView{
 
 impl RoomView {
     pub fn new(room_id: i32, room_name: String, user_id: i32) -> Self {
-        let mut messages = Manager::get_message_from_room(room_id);
+        let mut messages = Manager::get_message_from_room(room_id, 0);
         messages.reverse();
         Self {
             user_id,
@@ -43,10 +43,6 @@ impl RoomView {
         self.user_id
     }
 
-    fn refresh_data(&mut self) {
-        self.messages = Manager::get_message_from_room(self.room_id);
-        self.messages.reverse();
-    }
 
     fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
         todo!()
@@ -64,6 +60,11 @@ impl View for RoomView {
         &self.navigate_to
     }
 
+    fn refresh_data(&mut self) {
+        self.messages = Manager::get_message_from_room(self.room_id, 0);
+        self.messages.reverse();
+    }
+
     fn render(&self) -> String {
         let mut output = String::from("\x1b[2J\x1b[H");
         output.push_str(&format!("\x1b[1;32m{}\x1b[0m\r\n\r\n", self.room_name));
@@ -78,7 +79,8 @@ impl View for RoomView {
                 output.push_str(&format!("\x1b[1;32m[{}]\x1b[0m \x1b[1;35m{}\x1b[0m  {}\r\n", created_date, user, message));
             }
         }
-        output.push_str("\n");
+        output.push_str("\n>>> ");
+        output.push_str(self.message.as_str());
         output
     }
 
@@ -103,10 +105,7 @@ impl View for RoomView {
                 result_event = Events::Unknown;
             }
         } else if event != Events::Enter {
-            let buffer_str = buffer_string;
-            if buffer_str.trim() != "" {
-                self.message.push_str(buffer_str.as_str());
-            }
+            self.message = buffer_string;
             result_event = event;
         } else if event == Events::CntrlQ {
             self.navigate_to = NavigateTo::RoomView;

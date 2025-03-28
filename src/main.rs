@@ -13,7 +13,7 @@ use crate::input_interface::UserInterface;
 use crate::input_interface::Events;
 use crossbeam_channel::{unbounded, Sender, Receiver};
 use crate::broadcast_events::handle_broadcast_event;
-use crate::views::base_view::NavigateTo;
+
 
 fn remove_user_from_room(room_id: i32, tx_list: Arc<Mutex<Vec<Sender<String>>>>) {
     if room_id > 0 {
@@ -21,7 +21,7 @@ fn remove_user_from_room(room_id: i32, tx_list: Arc<Mutex<Vec<Sender<String>>>>)
         // broadcast disconnected message
         let tx_list_locked = tx_list.lock().unwrap();
         for tx in tx_list_locked.iter() {
-            let _ = tx.send(format!("User left room: {}", room_id));
+            let _ = tx.send(format!("{{\"event_type\": \"room_leave\", \"user_id\": {}}}", room_id));
         }
     }
 }
@@ -33,7 +33,7 @@ fn disconnect_user(user_id: i32, room_id: i32, tx_list: Arc<Mutex<Vec<Sender<Str
         // broadcast disconnected message
         let tx_list_locked = tx_list.lock().unwrap();
         for tx in tx_list_locked.iter() {
-            let _ = tx.send(format!("User offline {}", user_id));
+            let _ = tx.send(format!("{{\"event_type\": \"logout\", \"user_id\": {}}}", user_id));
 
         }
     }
@@ -81,9 +81,11 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
     // clone to share with broadcast thread
     let user_interface_clone = Arc::clone(&user_interface);
 
+    disable_line_mode(&stream_clone);
+
     let broadcast_stream_clone = Arc::clone(&stream_clone);
 
-
+    let mut buffer: Vec<u8> = vec![0; 30];
 
     // Thread to listen for broadcast messages and update ui via the shared stream object
     let rx_thread = thread::spawn(move || {
@@ -95,8 +97,9 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
                         break;
                     }
                 }
-                Err(_) => {
+                Err(e) => {
                     println!("receiver closed.");
+                    println!("error: {}", e);
                     break; // Break if there's no message after timeout or if the channel is closed
                 }
             }
@@ -109,7 +112,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         client_rx
     };
 
-    let mut buffer: Vec<u8> = vec![0; 30];
+
     loop {
         match stream_clone.lock().unwrap().read(&mut buffer) {
             Ok(0) => {
@@ -135,11 +138,26 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
 
         // collect buffer as string
         let buffer_string = UserInterface::clean_buffer(&buffer);
-        let binding = ui.get_current_view();
-        let mut view = binding.lock().unwrap();
 
-        // collect key press event
-        let view_handle_event = view.handle_event(user_event, buffer_string);
+        if ui.is_in_input_mode() {
+            ui.handle_input_event(&buffer_string, &user_event)
+        }
+
+        let binding = ui.get_current_view();
+        //let mut view = binding.lock().unwrap();
+
+        let view_handle_event;
+        if ui.is_in_input_mode() {
+            let mut view = binding.lock().unwrap();
+            view_handle_event = view.handle_event(user_event, ui.get_user_input());
+            if view_handle_event == Events::Enter  || view_handle_event == Events::RoomMessageSent {
+                ui.clear_user_input()
+            }
+        }
+        else {
+            let mut view = binding.lock().unwrap();
+            view_handle_event = view.handle_event(user_event, buffer_string);
+        }
 
         // handle default exit event
         if view_handle_event == Events::Exit {
@@ -154,26 +172,20 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
 
 
         else if view_handle_event == Events::InputModeDisable {
-            disable_line_mode(&stream_clone)
+            ui.set_input_mode(false);
         }
 
 
 
         else if view_handle_event == Events::InputModeEnable {
-            enable_line_mode(&stream_clone);
-        }
-
-
-        else if view_handle_event == Events::SecretInputModeEnable {
-            enable_secret_mode(&stream_clone);
+            ui.set_input_mode(true);
         }
 
 
         else if view_handle_event == Events::Authenticate {
             ui.set_user_id();
             ui.navigate_view();
-            disable_line_mode(&stream_clone);
-
+            ui.set_input_mode(false);
             let tx_list_locked = tx_list.lock().unwrap();
             for tx in tx_list_locked.iter() {
                 let _ = tx.send(format!("{{\"event_type\": \"user_login\", \"user_id\": {}}}", ui.get_user_id()));
@@ -218,27 +230,27 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
             disable_line_mode(&stream_clone);
         }
 
-        let updated_view = ui.get_current_view().lock().unwrap().render();
+        let mut view = binding.lock().unwrap();
+        let updated_view = view.render();
         stream_clone.lock().unwrap().write_all(updated_view.as_bytes()).unwrap();
         stream_clone.lock().unwrap().flush().unwrap();
-        // reset the buffer
+
         buffer = vec![0; 30];
     }
 
-
+    // // TODO This only works for authenticated users
     let user_id;
     let room_id;
     {
-        // this block creates and releases the lock on the ui
-        let ui = user_interface.lock().unwrap();
+
+        let mut ui = user_interface.lock().unwrap();
         user_id = ui.get_user_id();
         room_id = ui.get_current_room_id();
     }
 
     disconnect_user(user_id, room_id, tx_list.clone());
-
+    //
     rx_thread.join().unwrap();
-
     // Remove the sender from the shared list
     tx_list.lock().unwrap().retain(|t| !t.is_empty());
 

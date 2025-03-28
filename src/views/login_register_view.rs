@@ -1,6 +1,4 @@
 use std::any::Any;
-use std::io::Write;
-use std::net::TcpStream;
 use crate::db::manage::Manager;
 use crate::input_interface::Events;
 use crate::views::base_view::{NavigateTo, View};
@@ -115,6 +113,8 @@ impl LoginRegisterView {
         self.is_login = false;
         self.is_create = false;
         self.user_id = -1;
+        self.collecting_username = false;
+        self.collecting_password = false;
     }
 
 }
@@ -171,32 +171,22 @@ impl View for LoginRegisterView {
     fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
         let mut view_event: Events = Events::Unknown;
 
-        // reset error after Enter is pressed during an error
+        // reset state after Enter is pressed during an error
         if self.error && event == Events::Enter {
             self.reset_view_state();
         }
 
         // validate credentials if enter is pressed while collecting password
         else if self.input_mode && event == Events::Enter && self.collecting_password {
-            match self.validate_credentials() {
-                true => { view_event = Events::Authenticate; }
-                false => { self.reset_view_state(); }
+           if self.validate_credentials() {
+               view_event = Events::Authenticate
             }
         }
 
-        // override username with current buffer string if collecting username
-        else if self.input_mode && self.collecting_username {
-            self.username = buffer_string;
+        // change state to collecting password if enter is hit during collecting username
+        else if self.input_mode && self.collecting_username  && event == Events::Enter {
             self.collecting_username = false;
             self.collecting_password = true;
-        }
-
-        // override password with current buffer string if collecting password
-        else if self.input_mode && self.collecting_password {
-            let password = buffer_string;
-            self.password = password.clone();
-            self.collecting_password = false;
-            self.validate_credentials();
         }
 
         // handle arrow key selection when not in input mode
@@ -212,7 +202,21 @@ impl View for LoginRegisterView {
         // handle option selection when Enter Key when not in input mode
         else if event == Events::Enter && !self.input_mode {
             self.handle_selection();
+            view_event = Events::InputModeEnable
         }
+
+
+        // overwrite username when collecting username
+        else if self.input_mode && self.collecting_username {
+            self.username = buffer_string;
+        }
+
+        // overwrite password when collecting password
+        else if self.input_mode  && self.collecting_password {
+            self.password = buffer_string;
+        }
+
+
 
         // if the view defined a new event returns that, else returns the original event passed
         if view_event != Events::Unknown {
@@ -224,4 +228,3 @@ impl View for LoginRegisterView {
 
     }
 }
-//Events::Authenticate

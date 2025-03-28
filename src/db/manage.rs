@@ -86,7 +86,7 @@ impl Manager {
 
     }
 
-    pub fn get_rooms() -> HashMap<String, u32> {
+    pub fn get_rooms(offset: i32) -> HashMap<String, u32> {
         /**
         * Collects the room names and their online count as a hashmap
         */
@@ -94,7 +94,7 @@ impl Manager {
         let mut stmt = conn.prepare(queries::GET_ROOMS).unwrap();
 
         // Execute the query and collect the rows into a HashMap
-        let mut rows = stmt.query([]).unwrap();
+        let mut rows = stmt.query([offset]).unwrap();
 
         // Create an empty HashMap to store the results
         let mut rooms: HashMap<String, u32> = HashMap::new();
@@ -113,11 +113,11 @@ impl Manager {
         rooms
     }
 
-    pub fn search_rooms(room_query: String) -> HashMap<String, u32> {
+    pub fn search_rooms(room_query: String, offset: i32) -> HashMap<String, u32> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::SEARCH_ROOMS).unwrap();
         let pattern = format!("%{}%", room_query);
-        let mut rows = stmt.query([&pattern]).unwrap();
+        let mut rows = stmt.query([&pattern, &offset.to_string()]).unwrap();
 
         // Create an empty HashMap to store the results
         let mut rooms: HashMap<String, u32> = HashMap::new();
@@ -257,10 +257,10 @@ impl Manager {
     }
 
 
-    pub fn get_message_from_room(room_id: i32) -> Vec<(i32, String, String, String)> {
+    pub fn get_message_from_room(room_id: i32, offset: i32) -> Vec<(i32, String, String, String)> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_MESSAGES_FOR_ROOM).unwrap();
-        let mut rows = stmt.query([&room_id]).unwrap();
+        let mut rows = stmt.query([&room_id, &offset]).unwrap();
 
         // Create an empty HashMap to store the results
         let mut messages: Vec<(i32, String, String, String)> = Vec::new();

@@ -39,7 +39,8 @@ pub enum Events {
     UserView,
     EchoModeEnable,
     EchoModeDisable,
-    Delete
+    BackSpace,
+    SpaceBar
 }
 
 impl Events {
@@ -71,6 +72,7 @@ pub struct UserInterface {
     user_id: i32,
     echo_mode: bool,
     current_msg: String,
+    user_input: String
 }
 
 
@@ -86,7 +88,37 @@ impl UserInterface {
             current_room: -1,
             current_msg: String::new(),
             echo_mode: false,
+            user_input: String::new(),
         }
+    }
+
+
+    pub fn clear_user_input(&mut self) {
+        self.user_input = String::new();
+    }
+
+    pub fn get_user_input(&self) -> String {
+        self.user_input.clone()
+    }
+
+    pub fn handle_input_event(&mut self, buffer_str: &String, event: &Events) {
+        if *event == Events::Exit || *event == Events::Enter {
+            return;
+        }
+
+        else if *event == Events::BackSpace && self.user_input.len() > 0 {
+            self.user_input.remove(self.user_input.len() - 1);
+        }
+
+
+        else if *event == Events::SpaceBar {
+            self.user_input.push_str(" ")
+        }
+
+        else {
+            self.user_input.push_str(buffer_str);
+        }
+
     }
 
     pub fn set_echo_mode(&mut self, mode: bool)
@@ -141,6 +173,7 @@ impl UserInterface {
     }
 
     pub fn set_user_id(&mut self) {
+        // TODO view is already locked here
         let binding = self.get_current_view();
         let binding = binding.lock().unwrap();
         let login_view = binding
@@ -152,6 +185,9 @@ impl UserInterface {
 
     pub fn set_input_mode(&mut self, active: bool) {
         self.input_mode = active;
+        if !self.input_mode {
+            self.user_input = String::new();
+        }
     }
 
     pub fn is_in_input_mode(&self) -> bool {
@@ -172,6 +208,10 @@ impl UserInterface {
             event = Events::TAB
         } else if buffer[0] == 0x1b {
             event = Events::NavigateView
+        } else if buffer[0] == 127 {
+            event = Events::BackSpace
+        } else if buffer[0] == 32 {
+            event = Events::SpaceBar;
         } else {
             event =  Events::from_int(buffer[0] as i32)
         }
@@ -238,6 +278,7 @@ impl UserInterface {
             let room_id = self.get_current_room_id();
             let room_name = Manager::get_room_name_by_id(room_id);
             let room_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomView::new(room_id, room_name, user_id)));
+            self.input_mode = true;
             self.current_view = room_view;
         }
     }
