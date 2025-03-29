@@ -10,6 +10,7 @@ Working on a bbs in rust to learn rust
 - update all `rooms views` when a user leaves a room
 - how to handle user disconnect when someone who hasnt logged in logs out
 - pagination to users view and rooms view
+- unable to make a capital when creating room
 
 ## Notes
 - rules of ownership have different implications depending on whether our data is stored on the stack or the heap.

@@ -15,7 +15,7 @@ pub struct UsersView {
 
 impl UsersView {
 
-    pub fn new(user_id: i32) -> Self {
+    pub fn new() -> Self {
         let users = Manager::get_online_users(0);
         let navigate_to: NavigateTo = NavigateTo::NoneView;
         let selecting_user = true;
@@ -90,7 +90,7 @@ impl View for UsersView {
                     output.push_str(&format!("  {}: {}\r\n", user, online_emoji));
                 }
             }
-            output.push_str("\nUse ↑ (Arrow Up) / ↓ (Arrow Down) and Enter to select a user\r\n[S] Search for a user.\r\n[N] Next Page\r\n[H / CNTRL+Q] Home\r\n");
+            output.push_str("\nUse ↑ (Arrow Up) / ↓ (Arrow Down) and Enter to select a user\r\n[S] Search for a user\r\n[N] Next Page\r\n[H / CNTRL+Q] Home\r\n");
         }
         output
     }
@@ -129,7 +129,7 @@ impl View for UsersView {
         {
             self.searching_user = true;
             self.selecting_user = false;
-            result_event = Events::NavigateView;
+            result_event = Events::InputModeEnable;
 
         }
 
