@@ -129,7 +129,6 @@ impl View for UsersView {
         {
             self.searching_user = true;
             self.selecting_user = false;
-            self.navigate_to = NavigateTo::DirectMessageView;
             result_event = Events::NavigateView;
 
         }
