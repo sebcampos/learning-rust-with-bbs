@@ -222,12 +222,12 @@ impl UserInterface {
 
         }
         else if *navigate_to == NavigateTo::MenuView {
-            let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(BBSMenu::new(user_id)));
+            let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(BBSMenu::new()));
             self.current_view = menu_view
 
         }
         else if *navigate_to == NavigateTo::PeopleView {
-            let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UsersView::new(user_id)));
+            let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UsersView::new()));
             self.current_view = menu_view
         }
 

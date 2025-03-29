@@ -5,17 +5,15 @@ use crate::input_interface::Events;
 
 pub struct BBSMenu {
     options: Vec<&'static str>,
-    user_id: i32,
     selected_index: usize,
     navigate_to: NavigateTo
 }
 
 impl BBSMenu {
-    pub fn new(user_id: i32) -> Self {
+    pub fn new() -> Self {
         Self {
             options: vec!["🚪 Rooms", "👥 People", "👨‍💻 Me", "❌ Quit"],
             selected_index: 0,
-            user_id,
             navigate_to: NavigateTo::NoneView
         }
     }
@@ -36,9 +34,6 @@ impl BBSMenu {
         self.options[self.selected_index]
     }
 
-    fn get_user_id(&self) -> i32 {
-        self.user_id
-    }
 }
 
 
