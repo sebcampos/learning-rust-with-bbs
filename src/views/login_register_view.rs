@@ -91,9 +91,6 @@ impl LoginRegisterView {
     }
 
     fn handle_selection(&mut self) {
-        /**
-        *
-        */
         let selection = self.get_selection();
         if selection == "Login" {
             self.is_login = true;

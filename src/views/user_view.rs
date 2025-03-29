@@ -1,6 +1,5 @@
 use std::any::Any;
 use std::collections::HashMap;
-use std::net::TcpStream;
 use crate::db::manage::Manager;
 use crate::input_interface::Events;
 use crate::views::base_view::{NavigateTo, View};
@@ -23,20 +22,8 @@ impl UserView {
         }
     }
 
-    fn move_up(&mut self) {}
-
-    fn move_down(&mut self) {}
-
-    fn get_selection(&mut self) -> &str {
-        todo!()
-    }
-
-    fn get_user_id(&self) -> i32 {
-        todo!()
-    }
-
-    fn handle_selection(&mut self, stream: &mut TcpStream) -> Events {
-        todo!()
+    pub fn get_user_id(&self) -> i32{
+        self.user_id
     }
 }
 
@@ -66,10 +53,10 @@ impl View for UserView {
             if *key == "online" {
                 let logged_in = value == "1";
                 if logged_in {
-                    output.push_str("🟢 online\r\n");
+                    output.push_str("online:  🟢\r\n");
                 }
                 else {
-                    output.push_str("⚪️  offline\r\n");
+                    output.push_str("offline: ⚪️\r\n");
                 }
             }
             else {
@@ -77,21 +64,21 @@ impl View for UserView {
             }
         }
         if self.is_current_user {
-            output.push_str("\n[H] Home\r\n");
+            output.push_str("\n[H / CNTRL+Q] Home\r\n");
         } else {
-            output.push_str("\n[S] Send Message\r\n[H] Home\r\n");
+            output.push_str("\n[S] Send Message\r\n[H / CNTRL+Q] Home\r\n");
         }
         output
     }
 
 
-    fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
+    fn handle_event(&mut self, event: Events, _buffer_string: String) -> Events {
         let result_event: Events;
 
         if event == Events::KeyS {
             self.navigate_to = NavigateTo::DirectMessageView;
             result_event = Events::NavigateView
-        } else if event == Events::KeyH {
+        } else if event == Events::KeyH || event == Events::CntrlQ {
             self.navigate_to = NavigateTo::MenuView;
             result_event = Events::NavigateView;
 

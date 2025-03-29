@@ -10,31 +10,48 @@ pub struct Manager;
 
 impl Manager {
 
-
+    /**
+    * This method takes a room id and increments its online count by 1
+    */
     pub fn add_to_room_online(room_id: i32) {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::JOIN_ROOM).unwrap();
         stmt.execute([&room_id]).expect("Failed to add to room");
     }
 
+    /**
+    * This method takes a room id and decrements its online count by 1
+    */
     pub fn subtract_from_room_online(room_id: i32) {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::LEAVE_ROOM).unwrap();
         stmt.execute([&room_id]).expect("Failed to subtract from room");
     }
 
+
+    /**
+    * This method takes a user id and sets their online status to 1 / true
+    */
     pub fn login_user(user_id: i32) {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::LOGIN_USER).unwrap();
         stmt.execute([&user_id]).expect("Failed to login user");
     }
 
+
+    /**
+    * This method takes a user id and sets their online status to 0 / false
+    */
     pub fn logout_user(user_id: i32) {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::LOGOUT_USER).unwrap();
         stmt.execute([&user_id]).expect("Failed to logout user");
     }
 
+
+    /**
+    * This method takes a username and password and creates a new user
+    */
     pub fn create_user(username: &str, password: &str) -> i32 {
         let binding = hash(password, DEFAULT_COST).expect("Failed to hash password");
         let password_hash = binding.as_str();
@@ -57,6 +74,10 @@ impl Manager {
         }
     }
 
+    /**
+    * This method takes a username and password and validates the password is correct
+    * for the provided username
+    */
     pub fn validate_user(username: &str, password: &str) -> i32 {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::SEARCH_USER).unwrap();
@@ -72,6 +93,9 @@ impl Manager {
         }
     }
 
+    /**
+    * Retrieves the room name for the provided room id
+    */
     pub fn get_room_name_by_id(room_id: i32) -> String {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_ROOM_NAME).unwrap();
@@ -86,10 +110,12 @@ impl Manager {
 
     }
 
-    pub fn get_rooms(offset: i32) -> HashMap<String, u32> {
-        /**
-        * Collects the room names and their online count as a hashmap
-        */
+
+    /**
+    * gets the rooms ordered by active user count in descending order
+    * offset can be used for pagination
+    */
+    pub fn get_rooms(offset: i32) -> Vec<(String, u32)> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_ROOMS).unwrap();
 
@@ -97,7 +123,7 @@ impl Manager {
         let mut rows = stmt.query([offset]).unwrap();
 
         // Create an empty HashMap to store the results
-        let mut rooms: HashMap<String, u32> = HashMap::new();
+        let mut rooms: Vec<(String, u32)> = Vec::new();
 
 
         while let Some(row) = rows.next().unwrap() {
@@ -106,21 +132,26 @@ impl Manager {
             let online: u32 = row.get("online").unwrap();
 
             // Insert the result into the HashMap, here id is the key and name is the value
-            rooms.insert(name, online);
+            rooms.push((name, online));
         }
 
         // Return the populated HashMap
+        rooms.reverse();
         rooms
     }
 
-    pub fn search_rooms(room_query: String, offset: i32) -> HashMap<String, u32> {
+    /**
+    * retrieves rooms with names matching the `room_query` param
+    * offset can be used for pagination
+    */
+    pub fn search_rooms(room_query: String, offset: i32) ->  Vec<(String, u32)> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::SEARCH_ROOMS).unwrap();
         let pattern = format!("%{}%", room_query);
         let mut rows = stmt.query([&pattern, &offset.to_string()]).unwrap();
 
         // Create an empty HashMap to store the results
-        let mut rooms: HashMap<String, u32> = HashMap::new();
+        let mut rooms: Vec<(String, u32)> = Vec::new();
 
 
         while let Some(row) = rows.next().unwrap() {
@@ -129,7 +160,7 @@ impl Manager {
             let online: u32 = row.get("online").unwrap();
 
             // Insert the result into the HashMap, here id is the key and name is the value
-            rooms.insert(name, online);
+            rooms.push((name, online));
         }
 
         // Return the populated HashMap
@@ -137,16 +168,21 @@ impl Manager {
 
     }
 
-
+    /**
+    * creates a room using the provided `room_name` and `user_id`
+    */
     pub fn create_room(room_name: String, user_id: String) {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::CREATE_NEW_ROOM).unwrap();
 
         // Execute the query and collect the rows into a HashMap
-        let mut rows = stmt.execute([&room_name, &user_id]).unwrap();
+        stmt.execute([&room_name, &user_id]).unwrap();
         println!("Created new room {}", room_name);
     }
 
+    /**
+    * creates the tables in the db if they do not already exist
+    */
     pub fn setup_db() {
         let conn = get_db_connection().lock().unwrap();
         // Create users table
@@ -159,6 +195,9 @@ impl Manager {
 
     }
 
+    /**
+    * Retrieve info on a user using the provided `user_id`
+    */
     pub fn get_user(user_id: i32)  -> HashMap<String, String> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_USER).unwrap();
@@ -180,11 +219,16 @@ impl Manager {
 
         user
     }
-    pub fn get_online_users() -> HashMap<String, bool> {
+
+    /**
+    * retrieves users ordered by their logged in value (1 online, 0 offline)
+    * `offset` can be used for pagination
+    */
+    pub fn get_online_users(offset: i32) ->  Vec<(String, bool)>  {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_ONLINE_USERS).unwrap();
-        let mut rows = stmt.query([]).unwrap();
-        let mut users: HashMap<String, bool> = HashMap::new();
+        let mut rows = stmt.query([&offset]).unwrap();
+        let mut users: Vec<(String, bool)>  = Vec::new();
 
 
         while let Some(row) = rows.next().unwrap() {
@@ -200,13 +244,17 @@ impl Manager {
             }
 
             // Insert the result into the HashMap, here id is the key and name is the value
-            users.insert(name, online);
+            users.push((name, online));
         }
 
+        users.reverse();
         users
     }
 
-    pub fn get_room_id_by_name(room_name: String) -> i32{
+    /**
+    * gets the room id for the provided `room_name`, -1 if no match found
+    */
+    pub fn get_room_id_by_name(room_name: String) -> i32 {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_ROOM_BY_NAME).unwrap();
         let mut rows = stmt.query([&room_name]).unwrap();
@@ -219,7 +267,9 @@ impl Manager {
         }
     }
 
-
+    /**
+    * gets the user_id for the provided `user_name`, -1 if no match found
+    */
     pub fn get_user_id_by_name(user_name: &str) -> i32{
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_USER_BY_NAME).unwrap();
@@ -233,14 +283,17 @@ impl Manager {
         }
     }
 
-    pub fn search_users(username_query: String) -> HashMap<String, bool> {
+    /**
+    * searches for a user by username
+    */
+    pub fn search_users(username_query: String) -> Vec<(String, bool)>  {
         let conn = get_db_connection().lock().unwrap();
-        let mut stmt = conn.prepare(queries::SEARCH_USER).unwrap();
+        let mut stmt = conn.prepare(queries::QUERY_BY_USERNAME).unwrap();
         let pattern = format!("%{}%", username_query);
         let mut rows = stmt.query([&pattern]).unwrap();
 
         // Create an empty HashMap to store the results
-        let mut users: HashMap<String, bool> = HashMap::new();
+        let mut users: Vec<(String, bool)>  = Vec::new();
 
 
         while let Some(row) = rows.next().unwrap() {
@@ -249,14 +302,17 @@ impl Manager {
             let online: bool = row.get("logged_in").unwrap();
 
             // Insert the result into the HashMap, here id is the key and name is the value
-            users.insert(name, online);
+            users.push((name, online));
         }
 
         // Return the populated HashMap
         users
     }
 
-
+    /**
+    * collects the messages for a room ordered by created date in descending order
+    * `offset` can be used for pagination
+    */
     pub fn get_message_from_room(room_id: i32, offset: i32) -> Vec<(i32, String, String, String)> {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::GET_MESSAGES_FOR_ROOM).unwrap();
@@ -277,10 +333,44 @@ impl Manager {
         messages
     }
 
+    /**
+    * publishes a message to a room for the user
+    */
     pub fn post_message(room_id: i32, message: String, user_id: i32) {
         let conn = get_db_connection().lock().unwrap();
         let mut stmt = conn.prepare(queries::POST_MESSAGE_TO_ROOM).unwrap();
         stmt.execute([&message, &user_id.to_string(), &room_id.to_string()]).expect("Failed to post to room");
     }
 
+    /**
+    * saves a direct message between users
+    */
+    pub fn post_direct_message(user_id: i32, to_user_id: i32, message: String) {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::POST_DIRECT_MESSAGE).unwrap();
+        stmt.execute([&message, &user_id.to_string(), &to_user_id.to_string()]).expect("Failed to post to room");
+    }
+
+    /**
+    * retrieves the direct messages for between a set of users
+    */
+    pub fn get_direct_messages_for(user_id: i32, to_user_id: i32, offset: i32) -> Vec<(i32, String, String, String)> {
+        let conn = get_db_connection().lock().unwrap();
+        let mut stmt = conn.prepare(queries::GET_MESSAGES_FOR_USER).unwrap();
+        let mut rows = stmt.query([&user_id, &to_user_id, &to_user_id, &user_id, &offset]).unwrap();
+
+        // Create an empty HashMap to store the results
+        let mut messages: Vec<(i32, String, String, String)> = Vec::new();
+        while let Some(row) = rows.next().unwrap() {
+
+            let user_id: i32 = row.get("user_id").unwrap();
+            let name: String = row.get("username").unwrap();
+            let message: String = row.get("message").unwrap();
+            let created_date: String = row.get("created_date").unwrap();
+
+            // Insert the result into the HashMap, here id is the key and name is the value
+            messages.push((user_id, created_date, name, message));
+        }
+        messages
+    }
 }

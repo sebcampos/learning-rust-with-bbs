@@ -3,54 +3,53 @@ use crate::db::manage::Manager;
 use crate::input_interface::Events;
 use crate::views::base_view::{NavigateTo, View};
 
-
-pub struct RoomView{
+pub struct DirectMessageView {
     query_offset: i32,
     user_id: i32,
-    room_id: i32,
-    room_name: String,
+    user_id_2: i32,
     navigate_to: NavigateTo,
     message: String,
     messages: Vec<(i32, String, String, String)>,
-    sending_message: bool
 }
 
-impl RoomView {
-    pub fn new(room_id: i32, room_name: String, user_id: i32) -> Self {
-        let mut messages = Manager::get_message_from_room(room_id, 0);
+
+impl DirectMessageView {
+    pub fn new(user_id: i32, user_id_2: i32) -> Self {
+        let mut messages = Manager::get_direct_messages_for(user_id, user_id_2, 0);
         messages.reverse();
         Self {
             user_id,
-            room_id,
+            user_id_2,
             navigate_to: NavigateTo::NoneView,
             messages,
-            room_name,
-            sending_message: false,
             message: String::new(),
             query_offset: 0
         }
     }
 
-    fn get_user_id(&self) -> i32 {
-        self.user_id
+    /**
+    * returns the recipient user id
+    */
+    pub fn to_user_id(&self) -> i32 {
+        self.user_id_2
     }
-
-
 
 }
 
-impl View for RoomView {
+
+impl View for DirectMessageView {
 
     fn as_any(&self) -> &(dyn Any) {
         self
     }
+
     fn get_navigate_to(&self) -> &NavigateTo {
         &self.navigate_to
     }
 
     fn render(&self) -> String {
         let mut output = String::from("\x1b[2J\x1b[H");
-        output.push_str(&format!("\x1b[1;32m{}\x1b[0m\r\n\r\n", self.room_name));
+        output.push_str("\x1b[1;32mMessages\x1b[0m\r\n\r\n");
 
 
         // Append sorted rooms to output
@@ -67,11 +66,11 @@ impl View for RoomView {
         output
     }
 
+
     fn refresh_data(&mut self) {
-        self.messages = Manager::get_message_from_room(self.room_id, self.query_offset);
+        self.messages = Manager::get_direct_messages_for(self.user_id, self.user_id_2, self.query_offset);
         self.messages.reverse();
     }
-
 
     fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
         let mut result_event: Events = Events::Unknown;
@@ -88,16 +87,17 @@ impl View for RoomView {
 
         else if event == Events::Enter {
             if self.message != "" {
-                Manager::post_message(self.room_id, self.message.clone(), self.get_user_id());
-                result_event = Events::RoomMessageSent;
+                Manager::post_direct_message(self.user_id, self.user_id_2, self.message.clone());
+                result_event = Events::DirectMessageSent;
                 self.message.clear();
             }
             else {
                 result_event = Events::Unknown;
             }
         } else if event == Events::CntrlQ {
-            self.navigate_to = NavigateTo::RoomsView;
-            result_event = Events::RoomLeave
+            self.navigate_to = NavigateTo::MenuView;
+            result_event = Events::NavigateView;
+
         } else if event != Events::Enter {
             self.message = buffer_string;
             result_event = event;
@@ -106,4 +106,5 @@ impl View for RoomView {
         }
         result_event
     }
+
 }

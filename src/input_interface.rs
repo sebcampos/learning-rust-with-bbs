@@ -3,12 +3,13 @@ use crate::views::rooms_view::RoomsView;
 use crate::views::room_view::RoomView;
 use crate::views::base_view::View;
 use std::str;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use crate::db::manage::Manager;
 use crate::views::base_view::NavigateTo;
 use crate::views::menu_view::BBSMenu;
 use crate::views::users_view::UsersView;
 use crate::views::user_view::UserView;
+use crate::views::direct_message_view::DirectMessageView;
 
 #[derive(PartialEq, Eq)]
 pub enum Events {
@@ -37,8 +38,6 @@ pub enum Events {
     DirectMessageSent,
     RoomMessageSent,
     UserView,
-    EchoModeEnable,
-    EchoModeDisable,
     BackSpace,
     SpaceBar
 }
@@ -70,8 +69,6 @@ pub struct UserInterface {
     current_room: i32,
     input_mode: bool,
     user_id: i32,
-    echo_mode: bool,
-    current_msg: String,
     user_input: String
 }
 
@@ -86,8 +83,6 @@ impl UserInterface {
             current_view:  login_view,
             input_mode: false,
             current_room: -1,
-            current_msg: String::new(),
-            echo_mode: false,
             user_input: String::new(),
         }
     }
@@ -116,34 +111,13 @@ impl UserInterface {
         }
 
         else {
-            self.user_input.push_str(buffer_str);
+            let cleaned_string: String = buffer_str.chars()
+                .filter(|&c| c.is_ascii_alphanumeric() || c.is_ascii_punctuation())  // Retain only printable Unicode characters
+                .collect();
+
+            self.user_input.push_str(cleaned_string.as_str());
         }
 
-    }
-
-    pub fn set_echo_mode(&mut self, mode: bool)
-    {
-        self.echo_mode = mode;
-    }
-
-    pub fn is_in_echo_mode(&self) -> bool
-    {
-        self.echo_mode
-    }
-
-    pub fn add_to_current_message(&mut self, message: &str)
-    {
-        self.current_msg += message;
-    }
-
-    pub fn clear_current_message(&mut self)
-    {
-        self.current_msg = String::new();
-    }
-
-
-    pub fn get_current_message(&self) -> String {
-        self.current_msg.clone()
     }
 
     pub fn get_user_id(&self) -> i32 {
@@ -173,7 +147,6 @@ impl UserInterface {
     }
 
     pub fn set_user_id(&mut self) {
-        // TODO view is already locked here
         let binding = self.get_current_view();
         let binding = binding.lock().unwrap();
         let login_view = binding
@@ -242,24 +215,20 @@ impl UserInterface {
         let navigate_to = view.get_navigate_to();
         let user_id = self.get_user_id();
 
-        // TODO these views being singleton might be a problem
+
         if *navigate_to == NavigateTo::RoomsView {
             let rooms_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomsView::new(user_id)));
-            //drop(view); // Explicitly unlocks the MutexGuard here
             self.current_view= rooms_view
-            //self.current_view =  Box::new(views::rooms_view::RoomsView::new(self.user_id));
+
         }
         else if *navigate_to == NavigateTo::MenuView {
             let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(BBSMenu::new(user_id)));
-            //drop(view); // Explicitly unlocks the MutexGuard here
             self.current_view = menu_view
-            //self.current_view =  Box::new(views::menu_view::BBSMenu::new(self.user_id));
+
         }
         else if *navigate_to == NavigateTo::PeopleView {
             let menu_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(UsersView::new(user_id)));
-            //drop(view); // Explicitly unlocks the MutexGuard here
             self.current_view = menu_view
-            //self.current_view =  Box::new(views::menu_view::BBSMenu::new(self.user_id));
         }
 
         else if *navigate_to == NavigateTo::MeView {
@@ -280,6 +249,14 @@ impl UserInterface {
             let room_view: Arc<Mutex<dyn View>> = Arc::new(Mutex::new(RoomView::new(room_id, room_name, user_id)));
             self.input_mode = true;
             self.current_view = room_view;
+        }
+
+        else if *navigate_to == NavigateTo::DirectMessageView {
+            let user_view = view.as_any().downcast_ref::<UserView>().unwrap();
+            let to_user_id = user_view.get_user_id();
+            let dm_view = Arc::new(Mutex::new(DirectMessageView::new(user_id, to_user_id)));
+            self.input_mode = true;
+            self.current_view = dm_view;
         }
     }
 

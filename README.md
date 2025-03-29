@@ -7,6 +7,10 @@ Working on a bbs in rust to learn rust
 - Add Next page / Pagination for displaying online users, messages, and rooms
 - see if you can send the event class as part of the broadcast message instead of a string
 
+- update all `rooms views` when a user leaves a room
+- how to handle user disconnect when someone who hasnt logged in logs out
+- pagination to users view and rooms view
+
 ## Notes
 - rules of ownership have different implications depending on whether our data is stored on the stack or the heap.
 - If we assign a variable to an existing variable with a stack-based type such as i32, it will make a computationally inexpensive copy of that value.

@@ -1,11 +1,8 @@
 use std::any::Any;
-use std::net::TcpStream;
 use crate::views::base_view::{NavigateTo, View};
 use crate::input_interface::Events;
-use std::io::{Write};
-use crate::input_interface::Events::UpArrow;
 
-//#[derive(Clone)]
+
 pub struct BBSMenu {
     options: Vec<&'static str>,
     user_id: i32,
@@ -56,7 +53,7 @@ impl View for BBSMenu {
 
     fn render(&self) -> String {
         let mut output = String::from("\x1b[2J\x1b[H"); // Clear screen + move cursor to top
-        output.push_str("\x1b[1;32mWelcome to Rust BBS!\x1b[0m\r\n\r\n");
+        output.push_str("\x1b[1;32mWelcome to Friendly Automations Rust BBS!\x1b[0m\r\n\r\n");
 
         for (idx, option) in self.options.iter().enumerate() {
             if idx == self.selected_index {
@@ -70,11 +67,9 @@ impl View for BBSMenu {
         output
     }
 
-    fn refresh_data(&mut self) {
-        todo!()
-    }
+    fn refresh_data(&mut self) {}
 
-    fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
+    fn handle_event(&mut self, event: Events, _buffer_string: String) -> Events {
         let result_event: Events;
 
         if event == Events::UpArrow {

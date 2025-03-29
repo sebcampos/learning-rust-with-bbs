@@ -13,7 +13,8 @@ use crate::input_interface::UserInterface;
 use crate::input_interface::Events;
 use crossbeam_channel::{unbounded, Sender, Receiver};
 use crate::broadcast_events::handle_broadcast_event;
-
+use crate::views::direct_message_view::DirectMessageView;
+use crate::views::user_view::UserView;
 
 fn remove_user_from_room(room_id: i32, tx_list: Arc<Mutex<Vec<Sender<String>>>>) {
     if room_id > 0 {
@@ -37,9 +38,16 @@ fn disconnect_user(user_id: i32, room_id: i32, tx_list: Arc<Mutex<Vec<Sender<Str
 
         }
     }
+    else {
+        let tx_list_locked = tx_list.lock().unwrap();
+        for tx in tx_list_locked.iter() {
+            let _ = tx.send("{\"event_type\": \"anon_logout\"}".to_string());
+
+        }
+    }
 }
 
-fn enable_secret_mode(mut stream: &Arc<Mutex<TcpStream>>) {
+fn enable_secret_mode(stream: &Arc<Mutex<TcpStream>>) {
     let enable_secret_mode = [
         255, 251, 1,
         255, 252, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Enable line buffering)
@@ -49,7 +57,7 @@ fn enable_secret_mode(mut stream: &Arc<Mutex<TcpStream>>) {
 }
 
 
-fn disable_line_mode(mut stream: &Arc<Mutex<TcpStream>>) {
+fn disable_line_mode(stream: &Arc<Mutex<TcpStream>>) {
     let disable_line_mode = [
         255, 251, 1,  // IAC WILL ECHO (Disable local echo)
         255, 251, 3,  // IAC WILL SUPPRESS_GO_AHEAD (Disable line buffering)
@@ -69,7 +77,7 @@ fn enable_line_mode(mut stream: &Arc<Mutex<TcpStream>>) {
 }
 
 
-fn output_goodbye_message(mut stream: &Arc<Mutex<TcpStream>>) {
+fn output_goodbye_message(stream: &Arc<Mutex<TcpStream>>) {
     stream.lock().unwrap().write_all("\x1b[1;32mGoodbye!\x1b[0m\r\n\r\n".to_string().as_bytes()).unwrap();
 }
 
@@ -86,12 +94,18 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
     let broadcast_stream_clone = Arc::clone(&stream_clone);
 
     let mut buffer: Vec<u8> = vec![0; 30];
+    let mut stop_receiver = Arc::new(Mutex::new(false));
+    let stop_flag = Arc::clone(&stop_receiver);
 
     // Thread to listen for broadcast messages and update ui via the shared stream object
     let rx_thread = thread::spawn(move || {
         loop {
             match rx.recv() {
                 Ok(msg) => {
+                    let stop = stop_flag.lock().unwrap();
+                    if *stop {
+                        break;
+                    }
                     let res = handle_broadcast_event(msg, &user_interface_clone, &broadcast_stream_clone);
                     if res == -1 {
                         break;
@@ -106,11 +120,6 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         }
     });
 
-    let tx_clone = {
-        let (client_tx, client_rx) = unbounded(); // Create a new sender for this client
-        tx_list.lock().unwrap().push(client_tx); // Store in shared list
-        client_rx
-    };
 
 
     loop {
@@ -121,9 +130,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
                 break; // Break the loop to close the connection
             }
             Ok(n) => n, // Data was read successfully
-            Err(e) => {
-                // Handle the error, e.g., connection lost
-                eprintln!("{}", e);
+            Err(_) => {
                 0 // Exit on error (client may have closed the connection)
             }
         };
@@ -139,7 +146,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         // collect buffer as string
         let buffer_string = UserInterface::clean_buffer(&buffer);
 
-        if ui.is_in_input_mode() {
+        if ui.is_in_input_mode() && user_event != Events::UpArrow && user_event != Events::DownArrow {
             ui.handle_input_event(&buffer_string, &user_event)
         }
 
@@ -150,7 +157,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         if ui.is_in_input_mode() {
             let mut view = binding.lock().unwrap();
             view_handle_event = view.handle_event(user_event, ui.get_user_input());
-            if view_handle_event == Events::Enter  || view_handle_event == Events::RoomMessageSent {
+            if view_handle_event == Events::Enter  || view_handle_event == Events::RoomMessageSent  || view_handle_event == Events::DirectMessageSent {
                 ui.clear_user_input()
             }
         }
@@ -221,13 +228,23 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
 
         else if view_handle_event == Events::RoomMessageSent {
             enable_line_mode(&stream_clone);
-            let user_id = ui.get_user_id();
             let room_id = ui.get_current_room_id();
             let tx_list_locked = tx_list.lock().unwrap();
             for tx in tx_list_locked.iter() {
                 let _ = tx.send(format!("{{\"event_type\": \"room_message\", \"room_id\": {}}}", room_id));
             }
             disable_line_mode(&stream_clone);
+        }
+
+        else if view_handle_event == Events::DirectMessageSent {
+            let tx_list_locked = tx_list.lock().unwrap();
+            let mut view = binding.lock().unwrap();
+            let user_view = view.as_any().downcast_ref::<DirectMessageView>().unwrap();
+            let to_user_id = user_view.to_user_id();
+            for tx in tx_list_locked.iter() {
+                let _ = tx.send(format!("{{\"event_type\": \"direct_message\", \"user_id\": {}, \"to_user_id\": {}}}", ui.get_user_id(), to_user_id));
+            }
+
         }
 
         let mut view = binding.lock().unwrap();
@@ -238,7 +255,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         buffer = vec![0; 30];
     }
 
-    // // TODO This only works for authenticated users
+
     let user_id;
     let room_id;
     {
@@ -247,12 +264,12 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
         user_id = ui.get_user_id();
         room_id = ui.get_current_room_id();
     }
-
+    {
+        let mut stop = stop_receiver.lock().unwrap();
+        *stop = true;
+    }
     disconnect_user(user_id, room_id, tx_list.clone());
-    //
     rx_thread.join().unwrap();
-    // Remove the sender from the shared list
-    tx_list.lock().unwrap().retain(|t| !t.is_empty());
 
 }
 
@@ -276,7 +293,6 @@ fn main() {
 
         if let Ok(stream) = stream {
 
-            // TODO change time out to 1 second
             stream.set_read_timeout(Some(Duration::new(1, 0))).expect("TODO: panic message");
 
 

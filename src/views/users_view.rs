@@ -1,55 +1,35 @@
 use std::any::Any;
-use std::collections::HashMap;
-use std::net::TcpStream;
 use crate::views::base_view::{NavigateTo, View};
 use crate::input_interface::Events;
 use crate::db::manage::Manager;
 
 
 pub struct UsersView {
-    users: HashMap<String, bool>,
-    display_users: Vec<(String, bool)>,
+    users: Vec<(String, bool)>,
     navigate_to: NavigateTo,
-    user_id: i32,
     selecting_user: bool,
     searching_user: bool,
     selected_index: usize,
+    query: String,
 }
 
 impl UsersView {
 
     pub fn new(user_id: i32) -> Self {
-        let users = Manager::get_online_users();
-        let display_users = users.iter().map(|(k, v)| (k.clone(), *v))
-            .collect();
+        let users = Manager::get_online_users(0);
         let navigate_to: NavigateTo = NavigateTo::NoneView;
         let selecting_user = true;
         let searching_user = false;
         Self {
             users,
-            display_users,
             navigate_to,
             selecting_user,
             searching_user,
             selected_index: 0,
-            user_id
+            query: String::new(),
         }
     }
 
-
-    fn refresh_users(&mut self, new_users: Option<HashMap<String, bool>>) {
-        if let Some(new_users) = new_users {
-            self.users = new_users;
-        }
-        else {
-            self.users = Manager::get_online_users();
-        }
-        let mut vec: Vec<(String, bool)> = self.users.iter()
-            .map(|(k, v)| (k.clone(), *v))
-            .collect();
-        vec.sort_by(|a, b| b.1.cmp(&a.1));
-        self.display_users = vec;
-    }
 
     fn move_up(&mut self) {
         if self.selected_index > 0 {
@@ -59,19 +39,16 @@ impl UsersView {
 
 
     fn move_down(&mut self) {
-        let display_size: usize = self.display_users.len();
+        let display_size: usize = self.users.len();
         if display_size > 0 && self.selected_index < display_size - 1 {
             self.selected_index += 1;
         }
     }
 
     pub fn get_selection(&self) -> &str {
-        &self.display_users[self.selected_index].0
+        &self.users[self.selected_index].0
     }
 
-    fn get_user_id(&self) -> i32 {
-        self.user_id
-    }
 
 
 }
@@ -83,20 +60,22 @@ impl View for UsersView {
         self
     }
 
+
     fn get_navigate_to(&self) -> &NavigateTo {
         &self.navigate_to
     }
-    
+
     fn render(&self) -> String {
         let mut output = String::from("\x1b[2J\x1b[H");
         output.push_str("\x1b[1;32mUsers\x1b[0m\r\n\r\n");
 
 
         if self.searching_user {
-            output.push_str("\x1b[1;33m> Search (\"q\" to quit): ");
+            output.push_str("\x1b[1;33m> Search (CNTRL+Q to exit): ");
+            output.push_str(self.query.as_str());
         } else if self.selecting_user {
             // Append sorted rooms to output
-            for (index, (user, online)) in self.display_users.iter().enumerate() {
+            for (index, (user, online)) in self.users.iter().enumerate() {
                 let online_emoji;
                 if *online {
                     online_emoji = "🟢 online"
@@ -111,9 +90,19 @@ impl View for UsersView {
                     output.push_str(&format!("  {}: {}\r\n", user, online_emoji));
                 }
             }
-            output.push_str("\nUse ↑ (Arrow Up) / ↓ (Arrow Down) and Enter to select a user\r\n[S] Search for a user.\r\n[N] Next Page\r\n[H] Home\r\n");
+            output.push_str("\nUse ↑ (Arrow Up) / ↓ (Arrow Down) and Enter to select a user\r\n[S] Search for a user.\r\n[N] Next Page\r\n[H / CNTRL+Q] Home\r\n");
         }
         output
+    }
+
+    fn refresh_data(&mut self) {
+        if !self.query.is_empty() {
+            self.users = Manager::search_users(self.query.clone());
+        }
+
+        else {
+            self.users = Manager::get_online_users(0);
+        }
     }
 
 
@@ -121,13 +110,13 @@ impl View for UsersView {
     fn handle_event(&mut self, event: Events, buffer_string: String) -> Events {
         let mut result_event: Events = Events::Unknown;
 
-        if event == Events::UpArrow {
+        if event == Events::UpArrow && !self.searching_user {
             self.move_up();
         }
-        else if event == Events::DownArrow {
+        else if event == Events::DownArrow && !self.searching_user {
             self.move_down();
         }
-        else if event == Events::Enter {
+        else if event == Events::Enter && !self.searching_user {
             self.navigate_to = NavigateTo::UserView;
             result_event = Events::NavigateView;
         }
@@ -139,20 +128,35 @@ impl View for UsersView {
         else if event == Events::KeyS && !self.searching_user
         {
             self.searching_user = true;
-            result_event = Events::InputModeEnable;
+            self.selecting_user = false;
+            self.navigate_to = NavigateTo::DirectMessageView;
+            result_event = Events::NavigateView;
+
         }
 
-        else if self.searching_user {
-            let buffer_str = buffer_string;
-            if buffer_str.trim() == "q" {
-                self.searching_user = false;
-                result_event = Events::InputModeDisable;
-            } else if self.searching_user && buffer_str.trim() != "" {
-                let user_query = Manager::search_users(buffer_str);
-                self.refresh_users(Some(user_query));
-                self.searching_user = false;
-                result_event = Events::InputModeDisable;;
-            }
+        else if event == Events::CntrlQ && !self.searching_user {
+            self.navigate_to = NavigateTo::MenuView;
+            result_event = Events::NavigateView
+        }
+
+        else if event == Events::CntrlQ && self.searching_user {
+            self.selecting_user = true;
+            self.searching_user = false;
+            self.query = String::new();
+            result_event = Events::InputModeDisable
+        }
+
+
+        else if self.searching_user && buffer_string != ""  && event != Events::Enter {
+             self.query = buffer_string;
+        }
+
+        else if self.searching_user && self.query != ""  && event == Events::Enter {
+            self.refresh_data();
+            self.query = String::new();
+            self.searching_user = false;
+            self.selecting_user = true;
+            result_event = Events::InputModeDisable;
         }
 
         if result_event != Events::Unknown {

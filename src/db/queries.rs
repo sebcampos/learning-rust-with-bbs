@@ -25,14 +25,14 @@ pub const CREATE_ROOM_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY (room_id) REFERENCES rooms(id)
 )";
 
-pub const CREATE_DIRECT_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS direct_messages (\
+pub const CREATE_DIRECT_MESSAGES: &str = "CREATE TABLE IF NOT EXISTS direct_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     message TEXT NOT NULL,
-    from_id INTEGER,
-    to_id INTEGER,
+    user_id INTEGER,
+    to_user_id INTEGER,
     created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (from_id) REFERENCES users(id),
-    FOREIGN KEY (to_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (to_user_id) REFERENCES users(id)
 )";
 
 
@@ -45,6 +45,8 @@ pub const GET_ROOM_BY_NAME: &str = "SELECT id FROM rooms WHERE name = ? LIMIT 1"
 pub const SEARCH_ROOMS: &str = "SELECT * FROM rooms where name LIKE ? LIMIT 20 OFFSET ?";
 
 pub const SEARCH_USER: &str = "SELECT * FROM users WHERE username = ?";
+
+pub const QUERY_BY_USERNAME: &str = "SELECT * FROM users WHERE username LIKE ?";
 
 pub const CREATE_NEW_ROOM: &str = "INSERT INTO rooms (name, owner_id) VALUES (?, ?)";
 
@@ -68,4 +70,8 @@ pub const GET_USER_BY_NAME: &str = "SELECT id FROM users WHERE username = ?";
 
 pub const GET_MESSAGES_FOR_ROOM: &str = "SELECT m.user_id, m.created_date, u.username, m.message FROM messages AS m  LEFT JOIN users AS u ON m.user_id = u.id WHERE m.room_id = ? ORDER BY m.created_date DESC LIMIT 20 OFFSET ?";
 
+pub const GET_MESSAGES_FOR_USER: &str = "SELECT dms.user_id, dms.to_user_id, u.username, dms.message, dms.created_date FROM direct_messages AS dms LEFT JOIN users AS u on dms.user_id = u.id WHERE (user_id = ? AND to_user_id = ?) OR (user_id = ? AND to_user_id = ?) ORDER BY dms.created_date DESC LIMIT 20 OFFSET ?";
+
 pub const POST_MESSAGE_TO_ROOM: &str = "INSERT INTO messages (message, user_id, room_id) VALUES (?, ?, ?)";
+
+pub const POST_DIRECT_MESSAGE: &str = "INSERT INTO direct_messages (message, user_id, to_user_id) VALUES (?, ?, ?)";

@@ -1,5 +1,4 @@
-use rusqlite::{params, Connection};
-use crate::db::{queries};
+use rusqlite::{Connection};
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
