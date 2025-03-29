@@ -276,7 +276,7 @@ fn handle_client(mut stream_clone: Arc<Mutex<TcpStream>>, rx: Receiver<String>, 
 fn main() {
 
     // begins a listener for tcp connections
-    let listener = TcpListener::bind("127.0.0.1:2323").expect("Could not start server");
+    let listener = TcpListener::bind("0.0.0.0:2323").expect("Could not start server");
     println!("Telnet BBS started on port 2323...");
 
 
